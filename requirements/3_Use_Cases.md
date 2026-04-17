@@ -1,24 +1,10 @@
-# TCU Computer Science
-
-# Project Pulse
-
-# Use Cases
+# Project Pulse Use Cases
 
 ## Version <1.0>
 
+Use Cases Date: <17/04/2026>
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
-
-# Revision History
-
-**Date Version Description Author**
-<dd/mmm/yy> <x.x> <details> <name>
-
-
-## Use Cases Date: <dd/mmm/yy>
-
-<document identifier>
+## Use Cases Date: <17/04/2026>
 
 - Use Case List Table of Contents
 - Use Case 1: The Admin creates a rubric
@@ -56,10 +42,6 @@ Use Cases Date: <dd/mmm/yy>
 - Use Case 33: The Instructor generates a peer evaluation report of a student
 - Use Case 34: The Instructor generates a WAR report of the student
 - Business Rules
-
-
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 
 # Use Cases
 
@@ -103,9 +85,6 @@ alternative flow would branch off from the normal flow, and if pertinent, where 
 flow._
 **_● Exceptions_**
 
-
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 _Describe any anticipated error conditions that could occur during execution of the use case and how the
 system is to respond to those conditions. Number each alternative flow in the form “X.Y.EZ”, where “X” is
 the Use Case ID, Y indicates the normal (0) or alternative (>0) flow during which this exception could take
@@ -131,9 +110,6 @@ correctly, partially completed with a known state, or left in an undetermined st
 **_Assumptions_**
 _List any assumptions that were made regarding this use case or how it might execute._
 
-
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 
 ## Use Case List Table of Contents
 
@@ -173,9 +149,6 @@ UC-32: Generate a WAR report of a senior design team
 UC-33: Generate a peer evaluation report of a student
 UC-34: Generate a WAR report of the student
 
-
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 
 ## Use Case 1: The Admin creates a rubric
 
@@ -231,9 +204,6 @@ Criterion: Initiative
 Description: How proactive is this teammate? (1-10)
 Max score: 10
 
-
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 Criterion 4:
 Criterion: Courtesy
 Description: Does this teammate treat others with respect? (1-10)
@@ -251,9 +221,6 @@ Related Use Cases
 Assumptions:
 Open Issues:
 
-
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 
 ## Use Case 2: The Admin finds senior design sections
 
@@ -310,9 +277,6 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
-
 ## Use Case 3: The Admin views a senior design section
 
 ```
@@ -367,9 +331,6 @@ Related Use Cases:
 Assumptions:
 Open Issues:
 
-
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 
 ## Use Case 4: The Admin creates a senior design section
 
@@ -427,8 +388,8 @@ Priority: High
 Frequency of Use: 1 user, 1 usage per year.
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 Business Rules:
 Associated
 Information:
@@ -448,8 +409,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 5: The Admin edits a senior design section
 
@@ -513,8 +474,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 6: The Admin sets up active weeks for a senior design section
 
@@ -555,8 +516,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 7: The Admin/Instructor finds senior design teams
 
@@ -619,13 +580,13 @@ Related Use Cases:
 Assumptions:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 8: The Admin/Instructor views a senior design team
 
@@ -671,8 +632,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 9: The Admin creates a senior design team
 
@@ -731,12 +692,12 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
+
+
 
 ## Use Case 10: The Admin edits a senior design team
 
@@ -799,8 +760,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 11: The Admin invites students to join a senior design section
 
@@ -855,8 +816,8 @@ Hello,
 registration, please use the link below:_
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 _[Registration link]
 If you have any questions or need assistance, feel free to contact [Admin’s email] or our
 team directly.
@@ -870,8 +831,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 12: The Admin assigns students to senior design teams
 
@@ -915,8 +876,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 13: The Admin removes a student from a senior design team
 
@@ -960,8 +921,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 14: The Admin deletes a senior design team
 
@@ -1017,8 +978,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 15: The Admin/Instructor finds students
 
@@ -1082,8 +1043,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 16: The Admin/Instructor views a student
 
@@ -1130,8 +1091,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 17: The Admin deletes a student
 
@@ -1179,8 +1140,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 18: The Admin invites instructors to register an account
 
@@ -1235,8 +1196,8 @@ Hello,
 registration, please use the link below:_
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 _[Registration link]
 If you have any questions or need assistance, feel free to contact [Admin’s email] or our
 team directly.
@@ -1251,8 +1212,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 19: The Admin assigns instructors to senior design teams
 
@@ -1297,8 +1258,8 @@ Assumptions: The instructor must be assigned to the section of the team first. T
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 20: The Admin removes an instructor from a senior design team
 
@@ -1342,8 +1303,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 21: The Admin finds instructors
 
@@ -1405,8 +1366,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 22: The Admin views an instructor
 
@@ -1453,8 +1414,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 23: The Admin deactivate an instructor
 
@@ -1499,8 +1460,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 24: The Admin reactivate an instructor
 
@@ -1537,8 +1498,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 25: The Student sets up a student account
 
@@ -1594,8 +1555,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 26: The Student edits an account
 
@@ -1657,8 +1618,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 27: The Student manages activities in a Weekly Activity Report (WAR)
 
@@ -1715,8 +1676,8 @@ Based on the Student’s selection in step 5, the flow goes through either step 
 21. Use case ends.
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 Extensions: **8a. Input validation rule violation:**
 8a1. The System alerts the Student that an input validation rule is violated and
 displays the nature and location of the error.
@@ -1748,8 +1709,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 28: The Student submits a peer evaluation for the previous week
 
@@ -1805,8 +1766,8 @@ Tim Smith 9 ... ... ...
 ...
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 Private comments are for the instructor only. Public comments will be sent to the student
 under assessment.
 The Student shall be able to cancel the use case at any time prior to submitting it.
@@ -1815,8 +1776,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 29: The Student views her own peer evaluation report
 
@@ -1872,8 +1833,8 @@ comments, average total grade. See the example below.
 ● Format of the generated report: HTML.
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 An example of the generated report:
 Details:
 **Student Name: Quality of
@@ -1899,8 +1860,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 30: The Instructor sets up an instructor account
 
@@ -1958,12 +1919,12 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
+
+
 
 ## Use Case 31: The Instructor generates a peer evaluation report of the entire senior design section
 
@@ -2021,8 +1982,8 @@ week.
 ● Format of the generated report: HTML.
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 An example of the generated report:
 **Student Grade Commented
 by
@@ -2071,8 +2032,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 32: The Instructor/Student generates a WAR report of a senior design team
 
@@ -2127,8 +2088,8 @@ Description, Planned hours, Actual hours, Status. See the example below.
 ● Format of the generated report: HTML.
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 An example of the generated report:
 **Student Activity
 category
@@ -2156,8 +2117,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 33: The Instructor generates a peer evaluation report of a student
 
@@ -2212,8 +2173,8 @@ Report generating parameters:
 ● Format of the generated report: HTML.
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 An example of the generated report:
 **Week Grade Commented
 by
@@ -2242,8 +2203,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Use Case 34: The Instructor generates a WAR report of the student
 
@@ -2299,8 +2260,8 @@ hours, Actual hours, Status. See the example below.
 ● Format of the generated report: HTML.
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 An example of the generated report:
 Active week: 02-12-2024 to 02-18-2024
 **Activity
@@ -2349,8 +2310,8 @@ Assumptions:
 Open Issues:
 
 
-Use Cases Date: <dd/mmm/yy>
-<document identifier>
+
+
 
 ## Business Rules
 

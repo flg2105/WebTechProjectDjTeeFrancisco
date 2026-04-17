@@ -1,25 +1,12 @@
-# Project Pulse
-
-# Vision and Scope
+# Project Pulse Vision and Scope
 
 ## Version 1.
 
 [Note: Text enclosed in square brackets and displayed in blue italics is included to guide the author and should be
 deleted before publishing the document.]
 
+## Vision Date: <17/04/2026>
 
-Vision Date: 09/22/
-<document identifier>
-
-# Revision History
-
-```
-Date Version Description Author
-```
-
-## <document identifier>
-
-- Vision Date: 09/22/
 - 1. Introduction Table of Contents
    - 1.1 Background
    - 1.2 Current Process Flow (As-Is Process Flow)
@@ -38,12 +25,8 @@ Date Version Description Author
 - 4. Scope and Limitations
    - 4.1 Product Perspective
    - 4.2 Major Features / Scope
-   - 4.3 Deployment Considerations
+   - 4.3 Deployment Considerations 
 
-
-## Vision Date: 09/22/
-
-<document identifier>
 
 # Vision and Scope
 
@@ -89,9 +72,6 @@ Step 2: Explain the Current Process Flows
        improvement.
     _●_ There may be multiple major process flows.
 
-
-Vision Date: 09/22/
-<document identifier>
 Tips for this Section:
 _●_ Break the process flow into logical steps (e.g., receiving an order, processing, delivery).
 _●_ Identify who is responsible for each step (e.g., customer, warehouse staff, delivery team, software).
@@ -132,9 +112,6 @@ This system has two main tools:
     ● Each sheet records the activities of a team in a week.
     ● Foster better communication among team members.
 
-
-Vision Date: 09/22/
-<document identifier>
 The WAR Google Spread Sheets is available here:
 https://docs.google.com/spreadsheets/d/1jpxBQ8Gvv94bRl1gSpBzXRFxJu7IQXKjQZ5n28-EpD8/edit?usp=sharing
 Here is the current process flow for submitting WARs:
@@ -143,10 +120,6 @@ their team, locate the appropriate sheet based on the week number, and document 
 during the previous week. The instructor will keep the URLs of all the Google Sheets and review the updated ones
 on Tuesday. Finally, the instructor will grade and provide feedback to students through the university’s LMS
 (Learning Management System: TCU Online).
-
-
-Vision Date: 09/22/
-<document identifier>
 
 2. Peer Evaluation Form
     ● Excel Spreadsheet is used to collect peer evaluations in a team for a week (see the image below).
@@ -174,15 +147,6 @@ manually.
 each document by title, report number if applicable, date, and publishing organization. Specify the sources from
 which the references can be obtained. This information may be provided by reference to an appendix or to another
 document.]
-
-
-Vision Date: 09/22/
-<document identifier>
-TODO: reference the WAR and Peer Evaluation form.
-
-
-Vision Date: 09/22/
-<document identifier>
 
 **2. Business Requirements**
 [Projects are launched in the belief that creating or changing a product will provide worthwhile benefits for
@@ -229,10 +193,6 @@ marketplace. The following format may be used:]
 **2.4 Proposed New/Improved Process Flows (To-Be Process Flows)**
 [Design the New/Improved Process Flows:
 
-
-Vision Date: 09/22/
-<document identifier>
-
 1. Create another UML Activity Diagram with Swimlanes to represent the IMPROVED process flow,
     incorporating the software-to-be. Note some activities are automated system actions.
 2. Show how the software will interact with actors and streamline processes.
@@ -249,9 +209,6 @@ However, one manual task remains: the instructor must still upload grades to the
 integration would further enhance efficiency, it is currently outside the scope of this project.
 The Peer Evaluation process is also simplified:
 
-
-Vision Date: 09/22/
-<document identifier>
 The improved process for submitting and grading weekly peer evaluations is illustrated in the UML activity
 diagram. Students start by reviewing the WAR for their entire team and evaluating their team members within the
 Project Pulse system. Once all evaluations are completed, Project Pulse automates the process by compiling peer
@@ -283,9 +240,6 @@ RI-3 The application could be more confusing to use than the previous method.
 RI-4: The application might not be broad enough for other applications except for the TCU senior design course
 specifically.
 
-
-Vision Date: 09/22/
-<document identifier>
 **2.6 Business Assumptions and Dependencies**
 [An assumption is a statement that is believed to be true in the absence of proof or definitive knowledge. For
 example, an assumption may state that a specific operating system will be available for the hardware designated for
@@ -304,11 +258,6 @@ communicate with it bi-directionally.]
 AS-1: The system should use technologies that the client has knowledge about and can maintain after the product
 has been delivered.
 
-
-```
-Vision Date: 09/22/
-<document identifier>
-```
 **3. Stakeholder Profiles and User Descriptions**
 [To effectively provide products and services that meet your stakeholders’ and users’ real needs it is necessary to
 identify and involve all of the stakeholders as part of the Requirements Modeling process. You must also identify the
@@ -361,16 +310,9 @@ building a homegrown solution, or simply maintaining the status quo. List any kn
 or may become available. Include the major strengths and weaknesses of each competitor as perceived by the
 stakeholder or end user.]
 
-
-Vision Date: 09/22/
-<document identifier>
 The alternative is what is currently being used, which is where the student will upload their peer evaluation onto
 TCU Online, and then the instructor will have to download each one and calculate the grade for each group
 manually.
-
-
-Vision Date: 09/22/
-<document identifier>
 
 **4. Scope and Limitations
 4.1 Product Perspective**
@@ -404,9 +346,6 @@ Throughout this section, each feature will be externally perceivable by users, o
 external systems. These features should include a description of functionality and any relevant usability issues that
 must be addressed. The following guidelines apply:
 
-
-Vision Date: 09/22/
-<document identifier>
 ● State features at the level of product capabilities
 ● Keep feature descriptions at a general level. Provide 1 - 3 sentences per major feature.
 ● Avoid detailed workflows, UI behavior, or algorithms.

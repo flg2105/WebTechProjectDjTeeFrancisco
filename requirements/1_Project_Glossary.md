@@ -1,24 +1,8 @@
-# TCU Computer Science
-
-# Project Pulse
-
-# Glossary
+# Project Pulse Glossary
 
 ## Version <1.0>
 
-
-Glossary Date: <dd/mmm/yy>
-<document identifier>
-
-# Revision History
-
-**Date Version Description Author**
-<dd/mmm/yy> <x.x> <details> <name>
-
-
-## Glossary Date: <dd/mmm/yy>
-
-<document identifier>
+## Glossary Date: <17/04/2026>
 
 - 1. Introduction Table of Contents
    - 1.1 Purpose
@@ -39,9 +23,6 @@ Glossary Date: <dd/mmm/yy>
       - 2.8.1 Criterion
 
 
-Glossary Date: <dd/mmm/yy>
-<document identifier>
-
 # Glossary
 
 ## 1. Introduction
@@ -61,17 +42,13 @@ will help define complex concepts and various abbreviations used throughout the 
 This glossary is associated with the Peer Evaluation Tool project. The terms in this document will be used
 in the Vision and Scope document, the Use Case document, and other project documents.
 ```
-### 1.3 References
 
-### 1.4 Overview
+### 1.3 Overview
 
 ```
 The remnant of this document contains terms followed by their definitions. Terms that can be grouped
 together will have the same index number followed by a separate identifying digit.
 ```
-
-Glossary Date: <dd/mmm/yy>
-<document identifier>
 
 ## 2. Definitions
 
@@ -90,7 +67,6 @@ In this project, the term “Senior Design Section” denotes a particular offer
 designed for students in their senior year. This section commences at the end of August and typically
 concludes by the end of April of the following year. As of now, all senior students are enrolled in the same
 section.
-Section name format: YYYY-YYYY. E.g., 2023-2024, 2024-2025.
 ```
 ### 2.2 Senior Design Team
 
@@ -136,19 +112,15 @@ for a project team. It serves as a tool for communication among team members, as
 and stakeholders. A WAR consists of multiple activities. Each student specifies what they did during the
 ```
 
-Glossary Date: <dd/mmm/yy>
-<document identifier>
 week: activity category, planned activity, a description of the activity, hours planned, actual hours taken,
-and the status of the activity. Here is an example:
-https://docs.google.com/spreadsheets/d/1jpxBQ8Gvv94bRl1gSpBzXRFxJu7IQXKjQZ5n28-EpD8/edit?usp=sharing
+and the status of the activity.
 
 ### 2.7 Peer Evaluation
 
 ```
 A peer evaluation for a senior design team allows team members to assess each other’s contributions,
 performance, and teamwork skills every week. The peer evaluation helps identify strengths and areas for
-improvement and ensures accountability within the team. Here is an example of a peer evaluation for a
-week:
+improvement and ensures accountability within the team.
 ```
 #### 2.7.1 Public Comments
 
@@ -156,9 +128,6 @@ week:
 When evaluating a team member, a student can optionally provide public comments to this team member.
 Public comments will be sent to the evaluatee.
 ```
-
-Glossary Date: <dd/mmm/yy>
-<document identifier>
 
 #### 2.7.2 Private Comments
 
@@ -188,5 +157,4 @@ In a rubric, a criterion refers to a specific standard or aspect of performance,
 evaluated. Criteria are the individual components that together define the expectations for the performance
 in a week. Each criterion is designed to assess a particular element of the work, such as clarity of argument,
 depth of analysis, creativity, teamwork, participation, technical skill, or any other relevant characteristic.
-Examples of criteria can be found in the Rubric section.
 ```
