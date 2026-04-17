@@ -2,8 +2,6 @@
 
 ## Version <1.0>
 
-Use Cases Date: <17/04/2026>
-
 ## Use Cases Date: <17/04/2026>
 
 - Use Case List Table of Contents
