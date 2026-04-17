@@ -1,0 +1,19 @@
+# General
+.DS_Store
+*.log
+.codex
+
+# Env
+.env
+.env.local
+
+# Backend (Java/Maven)
+backend/target/
+backend/.classpath
+backend/.project
+backend/.settings/
+
+# Frontend (Node/Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/

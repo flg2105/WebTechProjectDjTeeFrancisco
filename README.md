@@ -50,3 +50,18 @@ project-pulse/
 - [Team Workflow](docs/team-workflow.md)
 - [Testing Strategy](docs/testing-strategy.md)
 - [Deployment](docs/deployment.md)
+- [Onboarding](docs/onboarding.md)
+- [Team Phase Plan](docs/team-phase-plan.md)
+
+## Quickstart (Local)
+
+```bash
+docker compose up -d
+cd backend && ./mvnw spring-boot:run
+```
+
+In a second terminal:
+
+```bash
+cd frontend && npm ci && npm run dev
+```

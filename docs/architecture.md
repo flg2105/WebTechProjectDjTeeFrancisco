@@ -45,33 +45,19 @@ The frontend is organized by feature/domain:
 Example:
 
 backend/
-└── src/main/java/com/tcu/projectpulse/
-├── config/
-├── shared/
-├── auth/
-│ ├── controller/
-│ ├── service/
-│ ├── repository/
-│ ├── domain/
-│ └── dto/
-├── user/
-│ ├── controller/
-│ ├── service/
-│ ├── repository/
-│ ├── domain/
-│ └── dto/
-├── project/
-│ ├── controller/
-│ ├── service/
-│ ├── repository/
-│ ├── domain/
-│ └── dto/
-└── requirement/
-├── controller/
-├── service/
-├── repository/
-├── domain/
-└── dto/
+└── src/main/java/team/projectpulse/
+    ├── system/
+    ├── user/
+    │   ├── controller/
+    │   ├── service/
+    │   ├── repository/
+    │   ├── domain/
+    │   └── dto/
+    ├── section/
+    ├── team/
+    ├── rubric/
+    ├── war/
+    └── peereval/
 
 ---
 
@@ -172,9 +158,11 @@ frontend/
 │ ├── utils/
 │ └── types/
 ├── features/
-│ ├── auth/
-│ ├── projects/
-│ └── requirements/
+│ ├── sections/
+│ ├── teams/
+│ ├── rubrics/
+│ ├── war/
+│ └── peereval/
 
 ---
 
