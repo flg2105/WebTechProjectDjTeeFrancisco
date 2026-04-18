@@ -8,6 +8,7 @@
     <div v-if="health" class="mt-3">
       <pre class="mb-0">{{ health }}</pre>
     </div>
+    <p v-if="errorMessage" class="text-danger mt-3 mb-0">{{ errorMessage }}</p>
   </div>
 </template>
 
@@ -16,9 +17,16 @@ import { ref } from 'vue'
 import { apiClient } from '../../shared/services/apiClient'
 
 const health = ref(null)
+const errorMessage = ref('')
 
 async function checkHealth() {
-  health.value = await apiClient.get('/api/health')
+  errorMessage.value = ''
+  health.value = null
+
+  try {
+    health.value = await apiClient.get('/api/health')
+  } catch (error) {
+    errorMessage.value = error.message
+  }
 }
 </script>
-
