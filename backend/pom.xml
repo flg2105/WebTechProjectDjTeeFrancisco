@@ -34,6 +34,13 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
+<<<<<<< HEAD
+=======
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-security</artifactId>
+    </dependency>
+>>>>>>> b904ed9 (Made fixes to errors in the frontend and backend files)
 
     <dependency>
       <groupId>com.mysql</groupId>
@@ -61,5 +68,9 @@
       </plugin>
     </plugins>
   </build>
+<<<<<<< HEAD
 </project>
 
+=======
+</project>
+>>>>>>> b904ed9 (Made fixes to errors in the frontend and backend files)
