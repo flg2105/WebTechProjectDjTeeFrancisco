@@ -1,118 +1,87 @@
-# Database Design
+# Database Design (Initial Draft)
 
-## Scope
+This is a working schema draft to unblock parallel backend work. It will evolve as use cases are implemented.
 
-This Phase 1 draft tightens the core schema for `Section`, `Team`, `User`, and `ActiveWeek` so it matches the glossary and the use cases currently in scope for setup, lookup, and assignment flows.
+## Core Entities (Prototype)
 
-## Entity summary
-
-### Section
-
-Represents a senior design section for one academic year offering.
-
-- Table: `sections`
-- Primary key: `id`
-- Business key: `section_code`
-- Required fields:
-  - `section_code` in `YYYY-YYYY` format
+- `users`
+  - `id` (PK)
+  - `email` (unique)
   - `display_name`
-  - `start_year`
-  - `end_year`
-- Constraints:
-  - one row per academic-year section
-  - `section_code` must be unique
+  - `role` (ADMIN | INSTRUCTOR | STUDENT)
+  - `status` (ACTIVE | INACTIVE)
 
-### User
+- `sections`
+  - `id` (PK)
+  - `name` (unique within academic year)
+  - `start_date`
+  - `end_date`
+  - `created_at`
 
-Represents a system account for a student, instructor, or admin.
+- `section_weeks`
+  - `id` (PK)
+  - `section_id` (FK → sections.id)
+  - `week_start_date` (Monday date, unique per section)
+  - `active` (boolean)
 
-- Table: `users`
-- Primary key: `id`
-- Business key: `email`
-- Required fields:
-  - `role`
-  - `first_name`
-  - `last_name`
-  - `email`
-  - `password_hash`
-  - `status`
-- Optional fields:
-  - `middle_initial`
-- Constraints:
-  - `email` must be unique
-  - `role` must support `STUDENT`, `INSTRUCTOR`, and `ADMIN`
-  - account lifecycle stays separate from team assignment
+- `teams`
+  - `id` (PK)
+  - `section_id` (FK → sections.id)
+  - `name` (unique within section)
 
-### ActiveWeek
+- `team_memberships`
+  - `id` (PK)
+  - `team_id` (FK → teams.id)
+  - `student_user_id` (FK → users.id)
 
-Represents whether a section week is active for WAR and peer-evaluation submissions.
+- `rubrics`
+  - `id` (PK)
+  - `name` (unique)
+  - `created_at`
 
-- Table: `active_weeks`
-- Primary key: `id`
-- Foreign key: `section_id -> sections.id`
-- Required fields:
-  - `section_id`
-  - `week_start_date`
-  - `active`
-- Constraints:
-  - week starts on Monday, per glossary
-  - uniqueness on `(section_id, week_start_date)`
-  - active week rows belong to a section, not to a team
-
-### Team
-
-Represents a senior design team within a section.
-
-- Table: `teams`
-- Primary key: `id`
-- Foreign key: `section_id -> sections.id`
-- Required fields:
-  - `section_id`
+- `rubric_criteria`
+  - `id` (PK)
+  - `rubric_id` (FK → rubrics.id)
   - `name`
-- Optional fields:
-  - `project_name`
-- Constraints:
-  - team names are unique within a section
-  - a team cannot exist outside a section
+  - `description`
+  - `max_score` (decimal)
+  - `position` (int)
 
-## Supporting relationship
+- `war_entries`
+  - `id` (PK)
+  - `section_week_id` (FK → section_weeks.id)
+  - `team_id` (FK → teams.id)
+  - `student_user_id` (FK → users.id)
+  - `submitted_at` (nullable for drafts)
 
-### TeamMembership
+- `war_activities`
+  - `id` (PK)
+  - `war_entry_id` (FK → war_entries.id)
+  - `category`
+  - `planned_activity`
+  - `description`
+  - `hours_planned` (decimal)
+  - `hours_actual` (decimal)
+  - `status`
 
-This supporting table is needed to satisfy the team assignment use cases without leaking team state into the user model.
+- `peer_evaluations`
+  - `id` (PK)
+  - `section_week_id` (FK → section_weeks.id)
+  - `team_id` (FK → teams.id)
+  - `evaluator_user_id` (FK → users.id)
+  - `evaluatee_user_id` (FK → users.id)
+  - `rubric_id` (FK → rubrics.id)
+  - `public_comments` (text, nullable)
+  - `private_comments` (text, nullable)
+  - `submitted_at`
 
-- Table: `team_memberships`
-- Primary key: `id`
-- Foreign keys:
-  - `team_id -> teams.id`
-  - `user_id -> users.id`
-- Required fields:
-  - `team_id`
-  - `user_id`
-  - `membership_role`
-- Constraints:
-  - uniqueness on `(team_id, user_id)`
-  - supports both `STUDENT` and `INSTRUCTOR` assignments
+- `peer_evaluation_scores`
+  - `id` (PK)
+  - `peer_evaluation_id` (FK → peer_evaluations.id)
+  - `rubric_criterion_id` (FK → rubric_criteria.id)
+  - `score` (decimal)
 
-## Relationship summary
+## Notes
 
-- One `Section` has many `Teams`.
-- One `Section` has many `ActiveWeeks`.
-- One `Team` has many `TeamMembership` rows.
-- One `User` can appear in many `TeamMembership` rows across the academic lifecycle.
-
-## Alignment with glossary and use cases
-
-- Glossary `Senior Design Section` maps to `sections`.
-- Glossary `Senior Design Team` maps to `teams`.
-- Glossary `Active Week` maps to `active_weeks` and is section-scoped.
-- Use cases for finding, viewing, creating, and editing sections/teams depend on `sections` and `teams`.
-- Use cases for assigning students and instructors to teams depend on `team_memberships`.
-- User lookup and account lifecycle use cases depend on `users`.
-
-## Boundary decisions captured in the schema
-
-- No team-specific columns are stored on `users`.
-- No active-week fields are stored on `teams`.
-- No duplicated section metadata is stored on `teams` beyond the foreign key.
-- Team assignment is modeled as a relationship table instead of embedded lists or repeated user columns.
+- Use case docs define “week starts Monday and ends Sunday”; `section_weeks.week_start_date` models this.
+- Prototype can treat “invites” as emails recorded in an `invitations` table later if needed; start with simple flows first.

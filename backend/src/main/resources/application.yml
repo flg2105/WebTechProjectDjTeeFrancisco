@@ -1,22 +1,36 @@
+server:
+  port: ${PORT:8080}
+
 spring:
   application:
     name: project-pulse-backend
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/project_pulse}
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:password}
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/project_pulse?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:projectpulse}
+    password: ${SPRING_DATASOURCE_PASSWORD:projectpulse}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
-    open-in-view: false
   sql:
     init:
       mode: always
 
-server:
-  port: ${PORT:8080}
-
 app:
   frontend:
     origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:projectpulse;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop

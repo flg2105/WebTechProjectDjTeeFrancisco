@@ -1,37 +1,67 @@
-# WebTechProjectDjTeeFrancisco
+# Project Pulse
 
-## UC-30 implemented on this branch
+A web application for managing weekly activity reports (WAR) and peer evaluations in TCU's senior design courses.
 
-This branch now contains a minimum full-stack implementation of `UC-30: The Instructor sets up an instructor account`.
+## Problem
 
-### Stack
+The current process for submitting and grading WARs and peer evaluations relies on Google Sheets, Excel spreadsheets, and manual file transfers through the university's LMS. This workflow is time-consuming, error-prone, and creates a heavy manual burden for both students and instructors.
 
-- Frontend: Vue 3 + Vuetify
-- Backend: Spring Boot 4.x structure
-- Database: MySQL-ready schema and seed data
+## Solution
 
-### UC-30 flow covered
+Project Pulse consolidates the entire workflow into a single web application where:
 
-1. Instructor opens the invitation link.
-2. The system loads the registration page from the token.
-3. The instructor enters first name, middle initial, last name, password, and reentered password.
-4. The system validates the inputs.
-5. The system shows a confirmation screen.
-6. The instructor confirms registration or returns to edit.
-7. The system stores the account and marks the invitation as used.
-8. The system redirects to `/login`.
+- **Students** submit weekly activity reports and peer evaluations directly in the system
+- **Instructors** view reports, review peer evaluations, and access automatically generated grades and feedback
+- **Admins** manage senior design sections, teams, and student/instructor assignments
 
-### Demo invitation
+## Key Features
 
-- Frontend route: `/register/instructor-invite-demo`
-- Seeded invited email: `instructor1@tcu.edu`
+- Manage senior design sections, teams, students, and instructors
+- Submit and track weekly activity reports
+- Submit peer evaluations with rubric-based scoring
+- Generate peer evaluation and WAR reports automatically
 
-### Backend API
+## Tech Stack
 
-- `GET /api/registrations/{token}`
-- `POST /api/registrations/instructor`
+- **Frontend:** Vue 3 + Vite
+- **Backend:** Spring Boot (Java 17+)
+- **Database:** MySQL
+- **CI/CD:** GitHub Actions
+- **Deployment:** Microsoft Azure
 
-### Notes
+## Project Structure
 
-- Maven is not installed in the current environment, so I could not compile the backend here.
-- Frontend dependencies are declared, but `npm install` has not been run in this workspace.
+```
+project-pulse/
+├── backend/          # Spring Boot application
+├── frontend/         # Vue 3 application
+├── requirements/     # Vision & scope, use cases, glossary
+├── docs/             # Architecture, coding standards, API guidelines, etc.
+└── .github/          # CI/CD workflows
+```
+
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Tech Stack](docs/tech-stack.md)
+- [API Guidelines](docs/api-guidelines.md)
+- [Coding Standards](docs/coding-standards.md)
+- [Development Plan](docs/development-plan.md)
+- [Team Workflow](docs/team-workflow.md)
+- [Testing Strategy](docs/testing-strategy.md)
+- [Deployment](docs/deployment.md)
+- [Onboarding](docs/onboarding.md)
+- [Team Phase Plan](docs/team-phase-plan.md)
+
+## Quickstart (Local)
+
+```bash
+docker compose up -d
+cd backend && ./mvnw spring-boot:run
+```
+
+In a second terminal:
+
+```bash
+cd frontend && npm ci && npm run dev
+```
