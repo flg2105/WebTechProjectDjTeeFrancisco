@@ -14,16 +14,24 @@ Owners:
 Goal: everyone can run the app locally; CI is green; shared conventions are locked.
 
 Member A (Backend baseline + system):
-- Ensure `Result` wrapper and global exception handling match `docs/api-guidelines.md`.
-- Add initial auth scaffolding decision note (JWT vs defer) and wire placeholders (no enforcement yet).
+- Complete: `Result`, `StatusCode`, `GlobalExceptionHandler`, and `ApiErrorController` match `docs/api-guidelines.md` for success and error responses.
+- Complete: integration tests cover `/api/health`, not found, and method-not-allowed responses as `Result` payloads.
+- Complete: `docs/decisions/0001-auth-direction.md` records the auth direction: defer JWT enforcement for early prototype work, keep JWT-compatible API design.
 
 Member B (Domain scaffolding + DB baseline):
-- Create initial domain module boundaries in backend (`section`, `team`, `user`) with DTO patterns.
-- Draft initial schema in `docs/database-design.md` for Section/Team/User/week concepts.
+- Complete: backend module folders exist for `section`, `team`, and `user`, each with `controller`, `service`, `repository`, `domain`, and `dto`.
+- Complete: initial boundaries are locked in `docs/database-design.md` so modules reference each other by IDs/DTOs rather than sharing repositories or persistence entities.
+- Complete: `docs/database-design.md` covers Section, Team, User, and Active Week concepts from the glossary/use cases.
 
 Member C (Frontend baseline + API client):
-- Create feature-based Vue structure and shared API client.
-- Create placeholder pages/routes for Rubrics, Sections, Teams, WAR, Peer Eval.
+- Complete: frontend feature folders exist for `rubrics`, `sections`, `teams`, `war`, and `peereval`.
+- Complete: feature services call APIs through `frontend/src/shared/services/apiClient.js`.
+- Complete: routes/placeholders exist for Rubrics, Sections, Teams, WAR, and Peer Eval.
+- Complete: Home can call `/api/health` through the shared API client once the backend is running.
+
+Shared:
+- Complete: `docs/onboarding.md` lists required local dependencies and quickstart steps for JDK 17+, Node.js 20+, Docker Desktop, backend, frontend, and the health smoke test.
+- Complete: prototype deadline plan remains documented here and summarized in `docs/development-plan.md`.
 
 ### Phase 2: Admin Setup Flows (Apr 19–Apr 22)
 
@@ -71,4 +79,3 @@ Member C (Frontend polish + integration):
 - Rebase or merge `main` daily.
 - PRs must include: UC ID(s), screenshots (frontend) or curl examples (backend), and test notes.
 - If a change crosses module boundaries, coordinate before pushing.
-
