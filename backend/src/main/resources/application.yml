@@ -4,14 +4,21 @@ server:
 spring:
   application:
     name: project-pulse
+  profiles:
+    default: local
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/project_pulse?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
-    username: ${SPRING_DATASOURCE_USERNAME:projectpulse}
-    password: ${SPRING_DATASOURCE_PASSWORD:projectpulse}
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:projectpulse;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.h2.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:sa}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: update
+
+h2:
+  console:
+    enabled: true
 
 ---
 spring:
@@ -26,3 +33,17 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+
+---
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/project_pulse?sslMode=REQUIRED&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER:com.mysql.cj.jdbc.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:projectpulse}
+    password: ${SPRING_DATASOURCE_PASSWORD:projectpulse}
+  jpa:
+    hibernate:
+      ddl-auto: update
