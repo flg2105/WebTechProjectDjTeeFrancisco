@@ -2,8 +2,6 @@
 .DS_Store
 *.log
 .codex
-out.txt
-backend/out.txt
 
 # Env
 .env
