@@ -38,14 +38,20 @@ Shared:
 Goal: Admin can create/manage the “container” data needed by students/instructors.
 
 Member A (Users + invitations):
-- Implement UC-18 (invite instructors), UC-25/UC-30 (account setup scaffolding) as minimal API flows.
-- Define roles: Admin/Instructor/Student (enforced later if needed).
+- Complete: UC-18 (invite instructors), UC-25/UC-30 (account setup scaffolding) implemented as minimal API flows.
+- Complete: UC-11 student invitation scaffold added to support team assignments.
+- Complete: roles are defined as Admin/Instructor/Student, with invited/active/inactive account status.
 
 Member B (Sections + teams):
-- Implement UC-2..UC-6 (sections + active weeks) and UC-7..UC-14 (teams CRUD + assignments entrypoints).
+- Complete: UC-2..UC-6 sections + active weeks implemented.
+- Complete: UC-7..UC-14 teams CRUD + student assignment entrypoints implemented.
 
 Member C (Rubrics):
-- Implement UC-1 (create rubric) and basic rubric retrieval for use by peer eval.
+- Complete: UC-1 create rubric and basic rubric retrieval implemented for section setup and future peer eval use.
+
+Shared:
+- Complete: Admin frontend screens support rubric creation, section setup, active week setup, student/instructor invitations, student account setup, team CRUD, and student assignment.
+- Complete: backend integration tests cover the Phase 2 setup chain and active-week Monday validation.
 
 ### Phase 3: Student Weekly Workflows (Apr 23–Apr 25)
 
