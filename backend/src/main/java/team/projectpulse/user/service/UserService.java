@@ -42,7 +42,13 @@ public class UserService {
 
   @Transactional
   public InvitationResponse inviteStudents(InvitationRequest request) {
-    if (request.sectionId() != null && !sectionRepository.existsById(request.sectionId())) {
+    if (request.sectionId() == null) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "sectionId is required");
+    }
+    if (request.sectionId() <= 0) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "sectionId must be positive");
+    }
+    if (!sectionRepository.existsById(request.sectionId())) {
       throw new ApiException(StatusCode.NOT_FOUND, "Section not found with id " + request.sectionId());
     }
     return invite(request, UserRole.STUDENT);
@@ -50,7 +56,7 @@ public class UserService {
 
   @Transactional
   public InvitationResponse inviteInstructors(InvitationRequest request) {
-    return invite(request, UserRole.INSTRUCTOR);
+    return invite(new InvitationRequest(null, request.emails()), UserRole.INSTRUCTOR);
   }
 
   @Transactional
@@ -76,7 +82,7 @@ public class UserService {
     user.setEmail(email);
     user.setDisplayName(displayNameFromEmail(email));
     user.setRole(role);
-    if (user.getStatus() == null) {
+    if (user.getStatus() == null || user.getStatus() != UserStatus.ACTIVE) {
       user.setStatus(UserStatus.INVITED);
     }
     user.touch();
