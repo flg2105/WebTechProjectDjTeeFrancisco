@@ -100,7 +100,7 @@
           <h3>Invite Students</h3>
           <label>
             Section
-            <select v-model.number="studentInvite.sectionId">
+            <select v-model="studentInvite.sectionId" required>
               <option disabled value="">Select a section</option>
               <option v-for="section in sections" :key="section.id" :value="section.id">
                 {{ section.name }}
@@ -154,7 +154,7 @@ const studentInvite = reactive({ sectionId: '', emails: '' })
 const instructorInvite = reactive({ emails: '' })
 
 function parseEmails(value) {
-  return value.split(/[\n,]+/).map((email) => email.trim()).filter(Boolean)
+  return value.split(/[\n,;]+/).map((email) => email.trim()).filter(Boolean)
 }
 
 function activeCount(section) {
@@ -273,7 +273,7 @@ async function inviteStudents() {
   message.value = ''
   try {
     await usersService.inviteStudents({
-      sectionId: Number(studentInvite.sectionId),
+      sectionId: studentInvite.sectionId ? Number(studentInvite.sectionId) : null,
       emails: parseEmails(studentInvite.emails)
     })
     message.value = 'Student invitations recorded.'
