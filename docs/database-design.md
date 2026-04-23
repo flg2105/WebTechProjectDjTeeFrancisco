@@ -24,9 +24,16 @@ Boundary rules:
   - `email` (unique)
   - `display_name`
   - `role` (ADMIN | INSTRUCTOR | STUDENT)
-  - `status` (ACTIVE | INACTIVE)
+  - `status` (INVITED | ACTIVE | INACTIVE)
   - `created_at`
   - `updated_at`
+
+- `invitations`
+  - `id` (PK)
+  - `email`
+  - `role` (INSTRUCTOR | STUDENT for prototype flows)
+  - `section_id` (nullable; used for student section invitations)
+  - `created_at`
 
 - `sections`
   - `id` (PK)
@@ -118,4 +125,4 @@ Boundary rules:
 - Use case docs define "week starts Monday and ends Sunday"; `active_weeks.week_start_date` models this and should always be a Monday date.
 - `active_weeks.active = false` covers holiday/break weeks where WAR and peer evaluation submissions are not required.
 - Team membership should point to users with `role = STUDENT`; team instructors should point to users with `role = INSTRUCTOR`.
-- Prototype can treat "invites" as emails recorded in an `invitations` table later if needed; start with simple flows first.
+- Prototype invitation flows record emails in `invitations` and create or update a matching user with `status = INVITED`.
