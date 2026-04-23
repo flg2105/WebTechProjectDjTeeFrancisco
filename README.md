@@ -60,6 +60,13 @@ docker compose up -d
 cd backend && ./mvnw spring-boot:run
 ```
 
+If the backend fails to start with a MySQL "Access denied" error, reset the local DB volume:
+
+```bash
+docker compose down -v
+docker compose up -d
+```
+
 In a second terminal:
 
 ```bash
