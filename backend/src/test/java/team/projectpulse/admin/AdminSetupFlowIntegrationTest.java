@@ -5,7 +5,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static team.projectpulse.system.StatusCode.INVALID_ARGUMENT;
+import static team.projectpulse.system.StatusCode.NOT_FOUND;
 import static team.projectpulse.system.StatusCode.SUCCESS;
+
+import static org.hamcrest.Matchers.nullValue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +55,76 @@ class AdminSetupFlowIntegrationTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.flag").value(false))
         .andExpect(jsonPath("$.code").value(INVALID_ARGUMENT));
+  }
+
+  @Test
+  void should_InviteStudents_AndRecordInvitedUsers() throws Exception {
+    Long rubricId = createRubricWithName("Peer Eval Rubric Invite Students Test");
+    Long sectionId = createSectionWithName(rubricId, "Invite Students Section");
+
+    mvc.perform(post("/api/invitations/students")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "sectionId": %d,
+                  "emails": ["invite.student.one@example.edu", "invite.student.two@example.edu"]
+                }
+                """.formatted(sectionId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.role").value("STUDENT"))
+        .andExpect(jsonPath("$.data.sectionId").value(sectionId))
+        .andExpect(jsonPath("$.data.users.length()").value(2))
+        .andExpect(jsonPath("$.data.users[0].status").value("INVITED"))
+        .andExpect(jsonPath("$.data.users[1].status").value("INVITED"));
+  }
+
+  @Test
+  void should_RejectStudentInvite_When_SectionIdMissing() throws Exception {
+    mvc.perform(post("/api/invitations/students")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "emails": ["missing.section@example.edu"]
+                }
+                """))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(INVALID_ARGUMENT));
+  }
+
+  @Test
+  void should_RejectStudentInvite_When_SectionNotFound() throws Exception {
+    mvc.perform(post("/api/invitations/students")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "sectionId": 999999,
+                  "emails": ["bad.section@example.edu"]
+                }
+                """))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(NOT_FOUND));
+  }
+
+  @Test
+  void should_InviteInstructors_AndRecordInvitedUsers() throws Exception {
+    mvc.perform(post("/api/invitations/instructors")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "emails": ["invite.instructor@example.edu"]
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.role").value("INSTRUCTOR"))
+        .andExpect(jsonPath("$.data.sectionId").value(nullValue()))
+        .andExpect(jsonPath("$.data.users.length()").value(1))
+        .andExpect(jsonPath("$.data.users[0].status").value("INVITED"));
   }
 
   private Long createRubric() throws Exception {
