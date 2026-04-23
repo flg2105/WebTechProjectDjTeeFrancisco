@@ -1,8 +1,9 @@
 @echo off
 setlocal
 
-set WRAPPER_DIR=%~dp0
-set MAVEN_PROJECTBASEDIR=%WRAPPER_DIR%
+set "WRAPPER_DIR=%~dp0"
+set "MAVEN_PROJECTBASEDIR=%WRAPPER_DIR%"
+if "%MAVEN_PROJECTBASEDIR:~-1%"=="\" set "MAVEN_PROJECTBASEDIR=%MAVEN_PROJECTBASEDIR:~0,-1%"
 set MAVEN_WRAPPER_JAR=%MAVEN_PROJECTBASEDIR%\.mvn\wrapper\maven-wrapper.jar
 set MAVEN_WRAPPER_PROPERTIES=%MAVEN_PROJECTBASEDIR%\.mvn\wrapper\maven-wrapper.properties
 
@@ -24,4 +25,4 @@ if not exist "%MAVEN_WRAPPER_JAR%" (
   )
 )
 
-java -classpath "%MAVEN_WRAPPER_JAR%" org.apache.maven.wrapper.MavenWrapperMain -Dmaven.multiModuleProjectDirectory="%MAVEN_PROJECTBASEDIR%" %*
+java -Dmaven.multiModuleProjectDirectory="%MAVEN_PROJECTBASEDIR%" -classpath "%MAVEN_WRAPPER_JAR%" org.apache.maven.wrapper.MavenWrapperMain %*
