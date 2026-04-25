@@ -1,6 +1,7 @@
 package team.projectpulse.user.service;
 
 import java.util.List;
+import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import team.projectpulse.section.repository.SectionRepository;
@@ -10,9 +11,13 @@ import team.projectpulse.user.domain.Invitation;
 import team.projectpulse.user.domain.ProjectUser;
 import team.projectpulse.user.domain.UserRole;
 import team.projectpulse.user.domain.UserStatus;
+import team.projectpulse.user.dto.EditAccountRequest;
+import team.projectpulse.user.dto.InstructorSearchResultResponse;
 import team.projectpulse.user.dto.InvitationRequest;
 import team.projectpulse.user.dto.InvitationResponse;
 import team.projectpulse.user.dto.SetupAccountRequest;
+import team.projectpulse.user.dto.StudentDetailsResponse;
+import team.projectpulse.user.dto.StudentSearchResultResponse;
 import team.projectpulse.user.dto.UserResponse;
 import team.projectpulse.user.repository.InvitationRepository;
 import team.projectpulse.user.repository.UserRepository;
@@ -38,6 +43,25 @@ public class UserService {
         ? userRepository.findAllByOrderByDisplayNameAsc()
         : userRepository.findByRoleOrderByDisplayNameAsc(role);
     return users.stream().map(this::toResponse).toList();
+  }
+
+  @Transactional
+  public UserResponse editAccount(Long id, EditAccountRequest request) {
+    if (id == null || id <= 0) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "id must be positive");
+    }
+    ProjectUser user = userRepository.findById(id)
+        .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "User not found with id " + id));
+
+    String email = request.email().trim().toLowerCase();
+    if (!Objects.equals(user.getEmail(), email) && userRepository.existsByEmailIgnoreCase(email)) {
+      throw new ApiException(StatusCode.CONFLICT, "User already exists with email " + email);
+    }
+
+    user.setEmail(email);
+    user.setDisplayName(request.displayName().trim());
+    user.touch();
+    return toResponse(userRepository.save(user));
   }
 
   @Transactional
@@ -67,6 +91,30 @@ public class UserService {
   @Transactional
   public UserResponse setupInstructor(SetupAccountRequest request) {
     return setupAccount(request, UserRole.INSTRUCTOR);
+  }
+
+  public List<StudentSearchResultResponse> findStudents(String q) {
+    String query = normalizeQuery(q);
+    return userRepository.searchByRole(UserRole.STUDENT, query).stream()
+        .map(this::toStudentSearchResult)
+        .toList();
+  }
+
+  public StudentDetailsResponse viewStudent(Long id) {
+    if (id == null || id <= 0) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "id must be positive");
+    }
+    ProjectUser user = userRepository.findById(id)
+        .filter(found -> found.getRole() == UserRole.STUDENT)
+        .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "Student not found with id " + id));
+    return toStudentDetails(user);
+  }
+
+  public List<InstructorSearchResultResponse> findInstructors(String q) {
+    String query = normalizeQuery(q);
+    return userRepository.searchByRole(UserRole.INSTRUCTOR, query).stream()
+        .map(this::toInstructorSearchResult)
+        .toList();
   }
 
   private InvitationResponse invite(InvitationRequest request, UserRole role) {
@@ -108,9 +156,51 @@ public class UserService {
     return toResponse(userRepository.save(user));
   }
 
+  private String normalizeQuery(String q) {
+    if (q == null) {
+      return null;
+    }
+    String trimmed = q.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
   private String displayNameFromEmail(String email) {
     int at = email.indexOf('@');
     return at > 0 ? email.substring(0, at) : email;
+  }
+
+  private StudentSearchResultResponse toStudentSearchResult(ProjectUser user) {
+    return new StudentSearchResultResponse(
+        user.getId(),
+        user.getEmail(),
+        user.getDisplayName(),
+        null,
+        null,
+        null,
+        null);
+  }
+
+  private StudentDetailsResponse toStudentDetails(ProjectUser user) {
+    return new StudentDetailsResponse(
+        user.getId(),
+        user.getEmail(),
+        user.getDisplayName(),
+        null,
+        null,
+        null,
+        null,
+        List.of(),
+        List.of());
+  }
+
+  private InstructorSearchResultResponse toInstructorSearchResult(ProjectUser user) {
+    return new InstructorSearchResultResponse(
+        user.getId(),
+        user.getEmail(),
+        user.getDisplayName(),
+        user.getStatus(),
+        null,
+        null);
   }
 
   private UserResponse toResponse(ProjectUser user) {
