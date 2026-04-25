@@ -2,6 +2,7 @@ package team.projectpulse.user.controller;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -76,5 +77,12 @@ public class UserController {
   public Result<List<InstructorSearchResultResponse>> findInstructors(
       @RequestParam(required = false) String q) {
     return Result.ok("Find Instructors Success", userService.findInstructors(q));
+  }
+
+  @DeleteMapping("/api/students/{id}")
+  public Result<Void> deleteStudent(@PathVariable Long id) {
+    boolean deleted = userService.deleteStudent(id);
+    String message = deleted ? "Delete Student Success" : "Deactivate Student Success";
+    return Result.ok(message, null);
   }
 }
