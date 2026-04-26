@@ -27,6 +27,9 @@ The execution plan is tracked in `docs/team-phase-plan.md`. High-level breakdown
 - Peer evaluation submission and self-report (UC-28..UC-29)
 - Account edits + basic find/view flows as needed (UC-26, UC-15..UC-17)
 
+Current status:
+- UC-28 and UC-29 are implemented in the `peereval` domain and frontend flow.
+
 ### Phase 4 – Reports + Hardening + Demo (Apr 26–Apr 27)
 - Instructor report endpoints for demo (UC-31..UC-34, prioritized by demo value)
 - Validation/error-state polish

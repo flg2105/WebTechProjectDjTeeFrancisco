@@ -1,0 +1,368 @@
+package team.projectpulse.peereval;
+
+import static org.hamcrest.Matchers.hasSize;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static team.projectpulse.system.StatusCode.CONFLICT;
+import static team.projectpulse.system.StatusCode.SUCCESS;
+
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.temporal.TemporalAdjusters;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class PeerEvaluationControllerIntegrationTest {
+
+  @Autowired
+  private MockMvc mvc;
+
+  @Test
+  void should_LoadCurrentPeerEvaluationForm_ForStudent() throws Exception {
+    PeerEvalFixture fixture = createPeerEvalFixture();
+
+    mvc.perform(get("/api/peer-evaluations")
+            .param("studentUserId", fixture.studentOneId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.evaluatorStudentUserId").value(fixture.studentOneId()))
+        .andExpect(jsonPath("$.data.weekStartDate").value(fixture.previousWeekStart().toString()))
+        .andExpect(jsonPath("$.data.alreadySubmitted").value(false))
+        .andExpect(jsonPath("$.data.criteria", hasSize(2)))
+        .andExpect(jsonPath("$.data.teammates", hasSize(2)));
+  }
+
+  @Test
+  void should_SubmitPeerEvaluations_AndGenerateOwnReport() throws Exception {
+    PeerEvalFixture fixture = createPeerEvalFixture();
+
+    submitEvaluation(
+        fixture.studentTwoId(),
+        fixture.previousWeekStart(),
+        """
+            [
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Strong delivery this week.",
+                "privateComment": "Needs more detail in standups.",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 8},
+                  {"rubricCriterionId": %d, "score": 9}
+                ]
+              },
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Great collaboration.",
+                "privateComment": null,
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 7},
+                  {"rubricCriterionId": %d, "score": 8}
+                ]
+              }
+            ]
+            """.formatted(
+            fixture.studentOneId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId(),
+            fixture.studentThreeId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId()));
+
+    submitEvaluation(
+        fixture.studentThreeId(),
+        fixture.previousWeekStart(),
+        """
+            [
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Consistent progress.",
+                "privateComment": "Could speak up sooner.",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 10},
+                  {"rubricCriterionId": %d, "score": 8}
+                ]
+              },
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Helpful teammate.",
+                "privateComment": "",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 9},
+                  {"rubricCriterionId": %d, "score": 9}
+                ]
+              }
+            ]
+            """.formatted(
+            fixture.studentOneId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId(),
+            fixture.studentTwoId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId()));
+
+    mvc.perform(get("/api/peer-evaluations/me/report")
+            .param("studentUserId", fixture.studentOneId().toString())
+            .param("weekStartDate", fixture.previousWeekStart().toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.studentUserId").value(fixture.studentOneId()))
+        .andExpect(jsonPath("$.data.receivedEvaluations").value(2))
+        .andExpect(jsonPath("$.data.averageTotalScore").value(17.50))
+        .andExpect(jsonPath("$.data.criterionAverages[0].averageScore").value(9.00))
+        .andExpect(jsonPath("$.data.criterionAverages[1].averageScore").value(8.50))
+        .andExpect(jsonPath("$.data.publicComments", hasSize(2)))
+        .andExpect(jsonPath("$.data.publicComments[0]").value("Strong delivery this week."))
+        .andExpect(jsonPath("$.data.publicComments[1]").value("Consistent progress."))
+        .andExpect(jsonPath("$.data.privateComments").doesNotExist())
+        .andExpect(jsonPath("$.data.evaluators").doesNotExist());
+  }
+
+  @Test
+  void should_RejectDuplicatePeerEvaluationSubmission_ForSameWeek() throws Exception {
+    PeerEvalFixture fixture = createPeerEvalFixture();
+
+    String evaluations = """
+        [
+          {
+            "evaluateeStudentUserId": %d,
+            "publicComment": "Clear communication.",
+            "privateComment": null,
+            "scores": [
+              {"rubricCriterionId": %d, "score": 9},
+              {"rubricCriterionId": %d, "score": 8}
+            ]
+          },
+          {
+            "evaluateeStudentUserId": %d,
+            "publicComment": "Reliable teammate.",
+            "privateComment": null,
+            "scores": [
+              {"rubricCriterionId": %d, "score": 8},
+              {"rubricCriterionId": %d, "score": 8}
+            ]
+          }
+        ]
+        """.formatted(
+        fixture.studentTwoId(),
+        fixture.criterionOneId(),
+        fixture.criterionTwoId(),
+        fixture.studentThreeId(),
+        fixture.criterionOneId(),
+        fixture.criterionTwoId());
+
+    submitEvaluation(fixture.studentOneId(), fixture.previousWeekStart(), evaluations);
+
+    mvc.perform(post("/api/peer-evaluations")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "evaluatorStudentUserId": %d,
+                  "weekStartDate": "%s",
+                  "evaluations": %s
+                }
+                """.formatted(
+                fixture.studentOneId(),
+                fixture.previousWeekStart(),
+                evaluations)))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(CONFLICT));
+  }
+
+  private void submitEvaluation(Long evaluatorStudentUserId, LocalDate weekStartDate, String evaluationsJson)
+      throws Exception {
+    mvc.perform(post("/api/peer-evaluations")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "evaluatorStudentUserId": %d,
+                  "weekStartDate": "%s",
+                  "evaluations": %s
+                }
+                """.formatted(evaluatorStudentUserId, weekStartDate, evaluationsJson)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
+  }
+
+  private PeerEvalFixture createPeerEvalFixture() throws Exception {
+    LocalDate currentWeekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+    LocalDate previousWeekStart = currentWeekStart.minusWeeks(1);
+    long unique = System.nanoTime();
+
+    Long rubricId = createRubric();
+    Long criterionOneId = findCriterionId(rubricId, 0);
+    Long criterionTwoId = findCriterionId(rubricId, 1);
+    Long sectionId = createSection(rubricId);
+    createActiveWeeks(sectionId, previousWeekStart, currentWeekStart);
+
+    Long studentOneId = setupStudent("phase3.student.one.%d@example.edu".formatted(unique), "Phase Three Student One");
+    Long studentTwoId = setupStudent("phase3.student.two.%d@example.edu".formatted(unique), "Phase Three Student Two");
+    Long studentThreeId = setupStudent("phase3.student.three.%d@example.edu".formatted(unique), "Phase Three Student Three");
+
+    Long teamId = createTeam(sectionId);
+    assignStudent(teamId, studentOneId);
+    assignStudent(teamId, studentTwoId);
+    assignStudent(teamId, studentThreeId);
+
+    return new PeerEvalFixture(
+        rubricId,
+        criterionOneId,
+        criterionTwoId,
+        sectionId,
+        teamId,
+        studentOneId,
+        studentTwoId,
+        studentThreeId,
+        previousWeekStart,
+        currentWeekStart);
+  }
+
+  private Long createRubric() throws Exception {
+    MvcResult result = mvc.perform(post("/api/rubrics")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "name": "Peer Eval Rubric Phase 3 %s",
+                  "criteria": [
+                    {
+                      "name": "Quality of work",
+                      "description": "How do you rate the quality of this teammate's work?",
+                      "maxScore": 10
+                    },
+                    {
+                      "name": "Productivity",
+                      "description": "How productive is this teammate?",
+                      "maxScore": 10
+                    }
+                  ]
+                }
+                """.formatted(System.nanoTime())))
+        .andExpect(status().isOk())
+        .andReturn();
+    return readId(result);
+  }
+
+  private Long findCriterionId(Long rubricId, int index) throws Exception {
+    MvcResult result = mvc.perform(get("/api/rubrics/" + rubricId))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    String body = result.getResponse().getContentAsString();
+    String marker = "\"id\":";
+    int start = nthIndexOf(body, marker, index + 2) + marker.length();
+    int end = body.indexOf(",", start);
+    return Long.valueOf(body.substring(start, end));
+  }
+
+  private int nthIndexOf(String text, String marker, int occurrence) {
+    int fromIndex = -1;
+    for (int i = 0; i < occurrence; i++) {
+      fromIndex = text.indexOf(marker, fromIndex + 1);
+    }
+    return fromIndex;
+  }
+
+  private Long createSection(Long rubricId) throws Exception {
+    MvcResult result = mvc.perform(post("/api/sections")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "name": "Phase 3 Section %s",
+                  "academicYear": "2026-2027",
+                  "startDate": "2026-01-05",
+                  "endDate": "2026-12-31",
+                  "rubricId": %d
+                }
+                """.formatted(System.nanoTime(), rubricId)))
+        .andExpect(status().isOk())
+        .andReturn();
+    return readId(result);
+  }
+
+  private void createActiveWeeks(Long sectionId, LocalDate previousWeekStart, LocalDate currentWeekStart) throws Exception {
+    mvc.perform(put("/api/sections/" + sectionId + "/active-weeks")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                [
+                  {"weekStartDate": "%s", "active": true},
+                  {"weekStartDate": "%s", "active": true}
+                ]
+                """.formatted(previousWeekStart, currentWeekStart)))
+        .andExpect(status().isOk());
+  }
+
+  private Long setupStudent(String email, String displayName) throws Exception {
+    MvcResult result = mvc.perform(post("/api/users/student-setup")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "email": "%s",
+                  "displayName": "%s"
+                }
+                """.formatted(email, displayName)))
+        .andExpect(status().isOk())
+        .andReturn();
+    return readId(result);
+  }
+
+  private Long createTeam(Long sectionId) throws Exception {
+    MvcResult result = mvc.perform(post("/api/teams")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "sectionId": %d,
+                  "name": "Phase 3 Team %s"
+                }
+                """.formatted(sectionId, System.nanoTime())))
+        .andExpect(status().isOk())
+        .andReturn();
+    return readId(result);
+  }
+
+  private void assignStudent(Long teamId, Long studentId) throws Exception {
+    mvc.perform(post("/api/teams/" + teamId + "/students")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "studentUserId": %d
+                }
+                """.formatted(studentId)))
+        .andExpect(status().isOk());
+  }
+
+  private Long readId(MvcResult result) throws Exception {
+    String body = result.getResponse().getContentAsString();
+    String marker = "\"id\":";
+    int start = body.indexOf(marker) + marker.length();
+    int end = body.indexOf(",", start);
+    return Long.valueOf(body.substring(start, end));
+  }
+
+  private record PeerEvalFixture(
+      Long rubricId,
+      Long criterionOneId,
+      Long criterionTwoId,
+      Long sectionId,
+      Long teamId,
+      Long studentOneId,
+      Long studentTwoId,
+      Long studentThreeId,
+      LocalDate previousWeekStart,
+      LocalDate currentWeekStart) {
+  }
+}

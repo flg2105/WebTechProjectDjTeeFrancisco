@@ -64,7 +64,7 @@ Member B (WAR):
 - Implement UC-27 (manage activities in WAR) with a minimal weekly model tied to active weeks.
 
 Member C (Peer evaluation):
-- Implement UC-28 (submit peer eval) and UC-29 (view own report) using the rubric criteria.
+- Complete: UC-28 (submit peer eval) and UC-29 (view own report) implemented with rubric-based scoring, previous active week validation, and student-safe report output.
 
 ### Phase 4: Reports + Hardening + Demo (Apr 26–Apr 27)
 
