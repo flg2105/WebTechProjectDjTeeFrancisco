@@ -218,6 +218,7 @@ async function loadSections() {
   try {
     const result = await sectionsService.findAll(searchName.value)
     sections.value = result.data
+    syncActiveWeeksSelection()
   } catch (err) {
     error.value = err.message
   } finally {
@@ -260,12 +261,58 @@ async function saveActiveWeeks() {
   error.value = ''
   message.value = ''
   try {
-    await sectionsService.updateActiveWeeks(activeWeeksSection.value.id, weekForm.value)
+    const normalizedWeeks = normalizeWeeksForSave()
+    if (normalizedWeeks.length === 0) {
+      throw new Error('Add at least one active week before saving.')
+    }
+
+    await sectionsService.updateActiveWeeks(activeWeeksSection.value.id, normalizedWeeks)
     message.value = 'Active weeks saved.'
     await loadSections()
+    syncActiveWeeksSelection()
   } catch (err) {
     error.value = err.message
   }
+}
+
+function syncActiveWeeksSelection() {
+  if (!activeWeeksSection.value) return
+
+  const refreshedSection = sections.value.find((section) => section.id === activeWeeksSection.value.id)
+  if (!refreshedSection) {
+    activeWeeksSection.value = null
+    weekForm.value = []
+    return
+  }
+
+  activeWeeksSection.value = refreshedSection
+  weekForm.value = refreshedSection.activeWeeks.map((week) => ({ ...week }))
+}
+
+function normalizeWeeksForSave() {
+  const seen = new Set()
+
+  return weekForm.value.map((week) => {
+    const weekStartDate = String(week.weekStartDate || '').trim()
+    if (!weekStartDate) {
+      throw new Error('Each active week needs a date.')
+    }
+
+    const day = new Date(`${weekStartDate}T00:00:00`).getDay()
+    if (day !== 1) {
+      throw new Error(`${weekStartDate} is not a Monday. Active weeks must use Monday dates.`)
+    }
+
+    if (seen.has(weekStartDate)) {
+      throw new Error(`Duplicate active week found: ${weekStartDate}`)
+    }
+    seen.add(weekStartDate)
+
+    return {
+      weekStartDate,
+      active: Boolean(week.active)
+    }
+  })
 }
 
 async function inviteStudents() {
