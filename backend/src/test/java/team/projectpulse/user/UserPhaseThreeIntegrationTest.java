@@ -3,10 +3,14 @@ package team.projectpulse.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static team.projectpulse.system.StatusCode.NOT_FOUND;
 import static team.projectpulse.system.StatusCode.SUCCESS;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.hamcrest.Matchers.nullValue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +20,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import team.projectpulse.team.domain.TeamMembership;
+import team.projectpulse.team.repository.TeamMembershipRepository;
+import team.projectpulse.user.domain.Invitation;
+import team.projectpulse.user.domain.UserRole;
+import team.projectpulse.user.repository.InvitationRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -24,6 +33,12 @@ class UserPhaseThreeIntegrationTest {
 
   @Autowired
   private MockMvc mvc;
+
+  @Autowired
+  private TeamMembershipRepository teamMembershipRepository;
+
+  @Autowired
+  private InvitationRepository invitationRepository;
 
   @Test
   void should_EditAccount_ById() throws Exception {
@@ -107,6 +122,37 @@ class UserPhaseThreeIntegrationTest {
         .andExpect(jsonPath("$.data[0].status").value("ACTIVE"));
   }
 
+  @Test
+  void should_DeleteStudent_AndCleanupMembershipsAndInvites() throws Exception {
+    String email = "phase3.deleteme@example.edu";
+    Long studentId = setupStudent(email, "Delete Me");
+
+    TeamMembership membership = new TeamMembership();
+    membership.setTeamId(123L);
+    membership.setStudentUserId(studentId);
+    teamMembershipRepository.save(membership);
+
+    Invitation invitation = new Invitation();
+    invitation.setEmail(email);
+    invitation.setRole(UserRole.STUDENT);
+    invitation.setSectionId(null);
+    invitationRepository.save(invitation);
+
+    mvc.perform(delete("/api/students/" + studentId))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data").value(nullValue()));
+
+    mvc.perform(get("/api/students/" + studentId))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(NOT_FOUND));
+
+    assertFalse(teamMembershipRepository.existsByStudentUserId(studentId));
+    assertFalse(invitationRepository.existsByEmailIgnoreCaseAndRole(email, UserRole.STUDENT));
+  }
+
   private Long setupStudent(String email, String displayName) throws Exception {
     MvcResult result = mvc.perform(post("/api/users/student-setup")
             .contentType(MediaType.APPLICATION_JSON)
@@ -151,4 +197,3 @@ class UserPhaseThreeIntegrationTest {
     return Long.valueOf(body.substring(start, end));
   }
 }
-

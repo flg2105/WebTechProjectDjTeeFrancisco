@@ -9,7 +9,11 @@ public interface TeamMembershipRepository extends JpaRepository<TeamMembership, 
 
   boolean existsByTeamId(Long teamId);
 
+  boolean existsByStudentUserId(Long studentUserId);
+
   List<TeamMembership> findByTeamIdOrderByStudentUserIdAsc(Long teamId);
 
   void deleteByTeamIdAndStudentUserId(Long teamId, Long studentUserId);
+
+  void deleteByStudentUserId(Long studentUserId);
 }

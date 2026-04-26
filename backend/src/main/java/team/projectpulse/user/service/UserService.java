@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
+import team.projectpulse.team.repository.TeamMembershipRepository;
 import team.projectpulse.section.repository.SectionRepository;
 import team.projectpulse.system.ApiException;
 import team.projectpulse.system.StatusCode;
@@ -28,14 +30,17 @@ public class UserService {
   private final UserRepository userRepository;
   private final InvitationRepository invitationRepository;
   private final SectionRepository sectionRepository;
+  private final TeamMembershipRepository teamMembershipRepository;
 
   public UserService(
       UserRepository userRepository,
       InvitationRepository invitationRepository,
-      SectionRepository sectionRepository) {
+      SectionRepository sectionRepository,
+      TeamMembershipRepository teamMembershipRepository) {
     this.userRepository = userRepository;
     this.invitationRepository = invitationRepository;
     this.sectionRepository = sectionRepository;
+    this.teamMembershipRepository = teamMembershipRepository;
   }
 
   public List<UserResponse> findAll(UserRole role) {
@@ -115,6 +120,29 @@ public class UserService {
     return userRepository.searchByRole(UserRole.INSTRUCTOR, query).stream()
         .map(this::toInstructorSearchResult)
         .toList();
+  }
+
+  @Transactional
+  public boolean deleteStudent(Long id) {
+    if (id == null || id <= 0) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "id must be positive");
+    }
+    ProjectUser student = userRepository.findById(id)
+        .filter(found -> found.getRole() == UserRole.STUDENT)
+        .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "Student not found with id " + id));
+
+    teamMembershipRepository.deleteByStudentUserId(id);
+    invitationRepository.deleteByEmailIgnoreCaseAndRole(student.getEmail(), UserRole.STUDENT);
+    try {
+      userRepository.delete(student);
+      userRepository.flush();
+      return true;
+    } catch (DataIntegrityViolationException ex) {
+      student.setStatus(UserStatus.INACTIVE);
+      student.touch();
+      userRepository.save(student);
+      return false;
+    }
   }
 
   private InvitationResponse invite(InvitationRequest request, UserRole role) {
