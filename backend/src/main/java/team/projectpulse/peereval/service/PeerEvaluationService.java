@@ -26,6 +26,10 @@ import team.projectpulse.peereval.dto.PeerEvaluationCriterionScoreRequest;
 import team.projectpulse.peereval.dto.PeerEvaluationEntryRequest;
 import team.projectpulse.peereval.dto.PeerEvaluationFormResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationReportResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationSectionEvaluationDetailResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationSectionMissingSubmissionResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationSectionReportResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationSectionStudentReportResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationSubmissionResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationTeammateResponse;
 import team.projectpulse.peereval.dto.SubmitPeerEvaluationRequest;
@@ -198,6 +202,52 @@ public class PeerEvaluationService {
         publicComments);
   }
 
+  public PeerEvaluationSectionReportResponse findSectionReport(Long sectionId, LocalDate weekStartDate) {
+    validatePositive(sectionId, "sectionId");
+    Section section = sectionRepository.findById(sectionId)
+        .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "Section not found with id " + sectionId));
+    LocalDate targetWeek = validateActiveWeek(sectionId, weekStartDate);
+
+    List<Team> teams = teamRepository.findBySectionIdOrderByNameAsc(sectionId);
+    Map<Long, Team> teamsById = new HashMap<>();
+    Map<Long, Long> studentTeamIds = new HashMap<>();
+    for (Team team : teams) {
+      teamsById.put(team.getId(), team);
+      for (TeamMembership membership : teamMembershipRepository.findByTeamIdOrderByStudentUserIdAsc(team.getId())) {
+        studentTeamIds.put(membership.getStudentUserId(), team.getId());
+      }
+    }
+
+    List<PeerEvaluationSubmission> submissions = submissionRepository.findBySectionIdAndWeekStartDate(sectionId, targetWeek);
+    if (submissions.isEmpty()) {
+      throw new ApiException(StatusCode.NOT_FOUND, "No peer evaluation report data available for this week");
+    }
+
+    Map<Long, ProjectUser> studentsById = loadStudents(studentTeamIds.keySet());
+    Set<Long> submittingStudentIds = submissions.stream()
+        .map(PeerEvaluationSubmission::getEvaluatorStudentUserId)
+        .collect(LinkedHashSet::new, Set::add, Set::addAll);
+
+    List<PeerEvaluationSectionStudentReportResponse> studentReports = studentTeamIds.keySet().stream()
+        .map(studentUserId -> toSectionStudentReport(studentUserId, studentTeamIds, teamsById, studentsById, submissions))
+        .sorted(sectionStudentComparator())
+        .toList();
+
+    List<PeerEvaluationSectionMissingSubmissionResponse> missingSubmitters = studentTeamIds.keySet().stream()
+        .filter(studentUserId -> !submittingStudentIds.contains(studentUserId))
+        .map(studentUserId -> toMissingSubmission(studentUserId, studentTeamIds, teamsById, studentsById))
+        .sorted(sectionMissingComparator())
+        .toList();
+
+    return new PeerEvaluationSectionReportResponse(
+        section.getId(),
+        section.getName(),
+        targetWeek,
+        maxTotalScore(section.getRubricId()),
+        studentReports,
+        missingSubmitters);
+  }
+
   private void validateEvaluations(
       List<PeerEvaluationEntryRequest> evaluations,
       StudentContext context,
@@ -252,6 +302,132 @@ public class PeerEvaluationService {
     if (scoreCriterionIds.size() != criteria.size()) {
       throw new ApiException(StatusCode.INVALID_ARGUMENT, "Each teammate evaluation must include every rubric criterion");
     }
+  }
+
+  private Map<Long, ProjectUser> loadStudents(Set<Long> studentUserIds) {
+    Map<Long, ProjectUser> studentsById = new HashMap<>();
+    for (ProjectUser student : userRepository.findAllById(studentUserIds)) {
+      studentsById.put(student.getId(), student);
+    }
+    for (Long studentUserId : studentUserIds) {
+      ProjectUser student = studentsById.get(studentUserId);
+      if (student == null || student.getRole() != UserRole.STUDENT) {
+        throw new ApiException(StatusCode.NOT_FOUND, "Student not found with id " + studentUserId);
+      }
+    }
+    return studentsById;
+  }
+
+  private PeerEvaluationSectionStudentReportResponse toSectionStudentReport(
+      Long studentUserId,
+      Map<Long, Long> studentTeamIds,
+      Map<Long, Team> teamsById,
+      Map<Long, ProjectUser> studentsById,
+      List<PeerEvaluationSubmission> submissions) {
+    ProjectUser student = studentsById.get(studentUserId);
+    Team team = requireTeam(studentTeamIds.get(studentUserId), teamsById);
+
+    List<PeerEvaluationSectionEvaluationDetailResponse> evaluations = submissions.stream()
+        .flatMap(submission -> submission.getEntries().stream()
+            .filter(entry -> Objects.equals(entry.getEvaluateeStudentUserId(), studentUserId))
+            .map(entry -> toEvaluationDetail(submission, entry, studentsById)))
+        .sorted(Comparator.comparing(
+            PeerEvaluationSectionEvaluationDetailResponse::evaluatorDisplayName,
+            String.CASE_INSENSITIVE_ORDER))
+        .toList();
+
+    List<BigDecimal> totals = evaluations.stream()
+        .map(PeerEvaluationSectionEvaluationDetailResponse::totalScore)
+        .toList();
+
+    return new PeerEvaluationSectionStudentReportResponse(
+        student.getId(),
+        student.getDisplayName(),
+        team.getId(),
+        team.getName(),
+        average(totals),
+        evaluations.size(),
+        evaluations);
+  }
+
+  private PeerEvaluationSectionEvaluationDetailResponse toEvaluationDetail(
+      PeerEvaluationSubmission submission,
+      PeerEvaluationEntry entry,
+      Map<Long, ProjectUser> studentsById) {
+    ProjectUser evaluator = studentsById.get(submission.getEvaluatorStudentUserId());
+    if (evaluator == null) {
+      throw new ApiException(
+          StatusCode.NOT_FOUND,
+          "Student not found with id " + submission.getEvaluatorStudentUserId());
+    }
+
+    BigDecimal totalScore = entry.getScores().stream()
+        .map(PeerEvaluationScore::getScore)
+        .reduce(BigDecimal.ZERO, BigDecimal::add)
+        .setScale(2, RoundingMode.HALF_UP);
+
+    return new PeerEvaluationSectionEvaluationDetailResponse(
+        submission.getEvaluatorStudentUserId(),
+        evaluator.getDisplayName(),
+        totalScore,
+        entry.getPublicComment(),
+        entry.getPrivateComment());
+  }
+
+  private PeerEvaluationSectionMissingSubmissionResponse toMissingSubmission(
+      Long studentUserId,
+      Map<Long, Long> studentTeamIds,
+      Map<Long, Team> teamsById,
+      Map<Long, ProjectUser> studentsById) {
+    ProjectUser student = studentsById.get(studentUserId);
+    Team team = requireTeam(studentTeamIds.get(studentUserId), teamsById);
+    return new PeerEvaluationSectionMissingSubmissionResponse(
+        student.getId(),
+        student.getDisplayName(),
+        team.getId(),
+        team.getName());
+  }
+
+  private Team requireTeam(Long teamId, Map<Long, Team> teamsById) {
+    Team team = teamsById.get(teamId);
+    if (team == null) {
+      throw new ApiException(StatusCode.NOT_FOUND, "Team not found with id " + teamId);
+    }
+    return team;
+  }
+
+  private Comparator<PeerEvaluationSectionStudentReportResponse> sectionStudentComparator() {
+    return Comparator
+        .comparing(
+            (PeerEvaluationSectionStudentReportResponse report) -> sortName(report.studentDisplayName()),
+            String.CASE_INSENSITIVE_ORDER)
+        .thenComparing(PeerEvaluationSectionStudentReportResponse::studentDisplayName, String.CASE_INSENSITIVE_ORDER);
+  }
+
+  private Comparator<PeerEvaluationSectionMissingSubmissionResponse> sectionMissingComparator() {
+    return Comparator
+        .comparing(
+            (PeerEvaluationSectionMissingSubmissionResponse report) -> sortName(report.studentDisplayName()),
+            String.CASE_INSENSITIVE_ORDER)
+        .thenComparing(
+            PeerEvaluationSectionMissingSubmissionResponse::studentDisplayName,
+            String.CASE_INSENSITIVE_ORDER);
+  }
+
+  private BigDecimal maxTotalScore(Long rubricId) {
+    return loadRubricCriteria(rubricId).stream()
+        .map(RubricCriterion::getMaxScore)
+        .reduce(BigDecimal.ZERO, BigDecimal::add)
+        .setScale(2, RoundingMode.HALF_UP);
+  }
+
+  private String sortName(String displayName) {
+    String trimmed = displayName == null ? "" : displayName.trim();
+    if (trimmed.isEmpty()) {
+      return "";
+    }
+    String[] parts = trimmed.split("\\s+");
+    return parts[parts.length - 1];
   }
 
   private StudentContext loadStudentContext(Long studentUserId) {
@@ -344,6 +520,12 @@ public class PeerEvaluationService {
     }
     String trimmed = comment.trim();
     return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  private void validatePositive(Long value, String field) {
+    if (value == null || value <= 0) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, field + " must be positive");
+    }
   }
 
   private BigDecimal average(List<BigDecimal> scores) {

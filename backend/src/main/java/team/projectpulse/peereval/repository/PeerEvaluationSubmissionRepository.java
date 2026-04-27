@@ -9,4 +9,6 @@ public interface PeerEvaluationSubmissionRepository extends JpaRepository<PeerEv
   boolean existsByEvaluatorStudentUserIdAndWeekStartDate(Long evaluatorStudentUserId, LocalDate weekStartDate);
 
   List<PeerEvaluationSubmission> findByTeamIdAndWeekStartDate(Long teamId, LocalDate weekStartDate);
+
+  List<PeerEvaluationSubmission> findBySectionIdAndWeekStartDate(Long sectionId, LocalDate weekStartDate);
 }
