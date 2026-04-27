@@ -1,45 +1,40 @@
 <template>
-  <section>
-    <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 mb-4">
+  <section class="page-stack">
+    <div class="page-heading">
       <div>
-        <p class="text-uppercase text-secondary small mb-1">UC-1</p>
-        <h1 class="h3 mb-2">Rubrics</h1>
-        <p class="text-secondary mb-0">
+        <p class="eyebrow">UC-1</p>
+        <h1>Rubrics</h1>
+        <p class="helper">
           Create the scoring guide students will use for weekly peer evaluations.
         </p>
       </div>
-      <button class="btn btn-outline-secondary align-self-start" type="button" @click="loadRubrics">
+      <button class="icon-button" type="button" @click="loadRubrics">
         Refresh
       </button>
     </div>
 
-    <div v-if="successMessage" class="alert alert-success" role="status">
-      {{ successMessage }}
-    </div>
-    <div v-if="errorMessage" class="alert alert-danger" role="alert">
-      {{ errorMessage }}
-    </div>
+    <p v-if="successMessage" class="notice success">{{ successMessage }}</p>
+    <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
 
-    <div class="row g-4">
-      <div class="col-12 col-xl-5">
-        <form class="border rounded p-3" @submit.prevent="createRubric">
-          <h2 class="h5 mb-3">Create Rubric</h2>
+    <div class="dashboard-grid rubric-layout">
+      <div>
+        <form class="surface-card stack-gap-md" @submit.prevent="createRubric">
+          <h2>Create Rubric</h2>
 
-          <div class="mb-3">
-            <label class="form-label" for="rubric-name">Rubric name</label>
+          <div>
+            <label for="rubric-name">Rubric name</label>
             <input
               id="rubric-name"
               v-model.trim="form.name"
-              class="form-control"
               type="text"
               placeholder="Peer Eval Rubric v1"
               required
             />
           </div>
 
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h3 class="h6 mb-0">Criteria</h3>
-            <button class="btn btn-sm btn-outline-primary" type="button" @click="addCriterion">
+          <div class="section-heading">
+            <h3>Criteria</h3>
+            <button class="ghost-button" type="button" @click="addCriterion">
               Add Criterion
             </button>
           </div>
@@ -47,12 +42,12 @@
           <div
             v-for="(criterion, index) in form.criteria"
             :key="criterion.localId"
-            class="border rounded p-3 mb-3"
+            class="nested-card stack-gap-md"
           >
-            <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
-              <p class="fw-semibold mb-0">Criterion {{ index + 1 }}</p>
+            <div class="section-heading">
+              <p class="card-title">Criterion {{ index + 1 }}</p>
               <button
-                class="btn btn-sm btn-outline-danger"
+                class="danger-button"
                 type="button"
                 :disabled="form.criteria.length === 1"
                 @click="removeCriterion(index)"
@@ -61,26 +56,24 @@
               </button>
             </div>
 
-            <div class="mb-3">
-              <label class="form-label" :for="`criterion-name-${criterion.localId}`">Name</label>
+            <div>
+              <label :for="`criterion-name-${criterion.localId}`">Name</label>
               <input
                 :id="`criterion-name-${criterion.localId}`"
                 v-model.trim="criterion.name"
-                class="form-control"
                 type="text"
                 placeholder="Quality of work"
                 required
               />
             </div>
 
-            <div class="mb-3">
-              <label class="form-label" :for="`criterion-description-${criterion.localId}`">
+            <div>
+              <label :for="`criterion-description-${criterion.localId}`">
                 Description
               </label>
               <textarea
                 :id="`criterion-description-${criterion.localId}`"
                 v-model.trim="criterion.description"
-                class="form-control"
                 rows="3"
                 placeholder="How do you rate this teammate?"
                 required
@@ -88,13 +81,12 @@
             </div>
 
             <div>
-              <label class="form-label" :for="`criterion-max-score-${criterion.localId}`">
+              <label :for="`criterion-max-score-${criterion.localId}`">
                 Max score
               </label>
               <input
                 :id="`criterion-max-score-${criterion.localId}`"
                 v-model.number="criterion.maxScore"
-                class="form-control"
                 type="number"
                 min="0.01"
                 step="0.01"
@@ -103,34 +95,34 @@
             </div>
           </div>
 
-          <button class="btn btn-primary" type="submit" :disabled="isSaving">
+          <button class="primary-button" type="submit" :disabled="isSaving">
             {{ isSaving ? 'Creating...' : 'Create Rubric' }}
           </button>
         </form>
       </div>
 
-      <div class="col-12 col-xl-7">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <h2 class="h5 mb-0">Available Rubrics</h2>
-          <span class="badge text-bg-secondary">{{ rubrics.length }}</span>
+      <div class="surface-card stack-gap-md">
+        <div class="section-heading">
+          <h2>Available Rubrics</h2>
+          <span class="count-pill">{{ rubrics.length }}</span>
         </div>
 
-        <p v-if="isLoading" class="text-secondary">Loading rubrics...</p>
-        <p v-else-if="rubrics.length === 0" class="text-secondary">
+        <p v-if="isLoading" class="empty-state">Loading rubrics...</p>
+        <p v-else-if="rubrics.length === 0" class="empty-state">
           No rubrics have been created yet.
         </p>
 
-        <div v-else class="d-grid gap-3">
-          <article v-for="rubric in rubrics" :key="rubric.id" class="border rounded p-3">
-            <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-3">
+        <div v-else class="stack-gap-sm">
+          <article v-for="rubric in rubrics" :key="rubric.id" class="nested-card stack-gap-md">
+            <div class="section-heading align-start">
               <div>
-                <h3 class="h5 mb-1">{{ rubric.name }}</h3>
-                <p class="text-secondary small mb-0">
+                <h3>{{ rubric.name }}</h3>
+                <p class="helper">
                   {{ rubric.criteria.length }} criteria
                 </p>
               </div>
               <button
-                class="btn btn-sm btn-outline-secondary align-self-start"
+                class="text-button"
                 type="button"
                 @click="selectRubric(rubric.id)"
               >
@@ -138,10 +130,10 @@
               </button>
             </div>
 
-            <ol class="mb-0">
-              <li v-for="criterion in rubric.criteria" :key="criterion.id" class="mb-2">
-                <span class="fw-semibold">{{ criterion.name }}</span>
-                <span class="text-secondary"> - {{ criterion.maxScore }} pts</span>
+            <ol class="feature-list compact-list">
+              <li v-for="criterion in rubric.criteria" :key="criterion.id">
+                <span class="criterion-name">{{ criterion.name }}</span>
+                <span class="helper">{{ criterion.maxScore }} pts</span>
               </li>
             </ol>
           </article>
@@ -149,25 +141,25 @@
       </div>
     </div>
 
-    <div v-if="selectedRubric" class="border rounded p-3 mt-4">
-      <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+    <div v-if="selectedRubric" class="surface-card stack-gap-md">
+      <div class="section-heading align-start">
         <div>
-          <h2 class="h5 mb-1">{{ selectedRubric.name }}</h2>
-          <p class="text-secondary mb-0">Criteria details for peer evaluation setup.</p>
+          <h2>{{ selectedRubric.name }}</h2>
+          <p class="helper">Criteria details for peer evaluation setup.</p>
         </div>
-        <button class="btn btn-sm btn-outline-secondary" type="button" @click="selectedRubric = null">
+        <button class="text-button" type="button" @click="selectedRubric = null">
           Close
         </button>
       </div>
 
-      <div class="table-responsive">
-        <table class="table align-middle mb-0">
+      <div class="table-wrap">
+        <table class="report-table">
           <thead>
             <tr>
-              <th scope="col">Order</th>
-              <th scope="col">Criterion</th>
-              <th scope="col">Description</th>
-              <th scope="col">Max score</th>
+              <th>Order</th>
+              <th>Criterion</th>
+              <th>Description</th>
+              <th>Max score</th>
             </tr>
           </thead>
           <tbody>
@@ -283,3 +275,33 @@ function resetForm() {
   form.criteria.splice(0, form.criteria.length, newCriterion())
 }
 </script>
+
+<style scoped>
+.rubric-layout {
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+}
+
+.nested-card {
+  background: rgba(247, 249, 252, 0.95);
+  border: 1px solid rgba(204, 215, 230, 0.82);
+  border-radius: 22px;
+  padding: 1.1rem;
+}
+
+.card-title,
+.criterion-name {
+  font-weight: 700;
+  margin: 0;
+}
+
+.compact-list {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+@media (max-width: 960px) {
+  .rubric-layout {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

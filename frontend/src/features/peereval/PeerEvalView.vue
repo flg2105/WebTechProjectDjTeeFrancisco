@@ -49,51 +49,53 @@
         </div>
 
         <form v-else class="submission-form" @submit.prevent="submitEvaluation">
-          <div
-            v-for="evaluation in evaluationForm.evaluations"
-            :key="evaluation.evaluateeStudentUserId"
-            class="evaluation-card"
-          >
-            <div class="card-header">
-              <strong>{{ evaluation.displayName }}</strong>
-              <span class="helper">Evaluate teammate</span>
-            </div>
+          <div class="submission-stack" :class="{ compact: evaluationForm.evaluations.length > 2 }">
+            <div
+              v-for="evaluation in evaluationForm.evaluations"
+              :key="evaluation.evaluateeStudentUserId"
+              class="evaluation-card"
+            >
+              <div class="card-header">
+                <strong>{{ evaluation.displayName }}</strong>
+                <span class="helper">Evaluate teammate</span>
+              </div>
 
-            <div class="score-grid">
-              <label
-                v-for="criterion in currentForm.criteria"
-                :key="`${evaluation.evaluateeStudentUserId}-${criterion.rubricCriterionId}`"
-              >
-                {{ criterion.name }}
-                <span class="helper">{{ criterion.description }}</span>
-                <input
-                  v-model.number="evaluation.scoresByCriterion[criterion.rubricCriterionId]"
-                  :max="criterion.maxScore"
-                  min="0"
-                  step="0.01"
-                  type="number"
-                  required
-                />
+              <div class="score-grid">
+                <label
+                  v-for="criterion in currentForm.criteria"
+                  :key="`${evaluation.evaluateeStudentUserId}-${criterion.rubricCriterionId}`"
+                >
+                  {{ criterion.name }}
+                  <span class="helper">{{ criterion.description }}</span>
+                  <input
+                    v-model.number="evaluation.scoresByCriterion[criterion.rubricCriterionId]"
+                    :max="criterion.maxScore"
+                    min="0"
+                    step="0.01"
+                    type="number"
+                    required
+                  />
+                </label>
+              </div>
+
+              <label>
+                Public comment
+                <textarea
+                  v-model="evaluation.publicComment"
+                  rows="2"
+                  placeholder="Optional note the teammate can see"
+                ></textarea>
+              </label>
+
+              <label>
+                Private comment
+                <textarea
+                  v-model="evaluation.privateComment"
+                  rows="2"
+                  placeholder="Optional note for the instructor only"
+                ></textarea>
               </label>
             </div>
-
-            <label>
-              Public comment
-              <textarea
-                v-model="evaluation.publicComment"
-                rows="2"
-                placeholder="Optional note the teammate can see"
-              ></textarea>
-            </label>
-
-            <label>
-              Private comment
-              <textarea
-                v-model="evaluation.privateComment"
-                rows="2"
-                placeholder="Optional note for the instructor only"
-              ></textarea>
-            </label>
           </div>
 
           <button class="primary-button" :disabled="isSubmitting || currentForm.alreadySubmitted" type="submit">
@@ -108,7 +110,7 @@
         </form>
       </section>
 
-      <section class="panel">
+      <section class="panel report-panel">
         <div class="section-header">
           <div>
             <h2>Own Report</h2>
@@ -327,12 +329,6 @@ async function submitEvaluation() {
 
 .eyebrow,
 .helper,
-.empty-state {
-  color: #57606a;
-}
-
-.eyebrow,
-.helper,
 .empty-state,
 .report-summary p,
 h1,
@@ -343,78 +339,65 @@ h3 {
 
 .layout-grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(2, minmax(300px, 1fr));
+  align-items: start;
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(320px, 1fr));
 }
 
 .panel,
 .evaluation-card {
-  border: 1px solid #d8dee4;
-  border-radius: 8px;
-  padding: 1rem;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(208, 218, 230, 0.8);
+  border-radius: 26px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  padding: 1.4rem;
 }
 
 .evaluation-card {
-  background: #fbfdff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(247, 249, 252, 0.96));
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.evaluation-card:hover {
+  border-color: rgba(94, 122, 255, 0.24);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
 }
 
 .score-grid {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.85rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.submission-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.submission-stack.compact {
+  max-height: 52rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
 label {
   display: grid;
-  gap: 0.35rem;
-}
-
-input,
-textarea,
-select {
-  border: 1px solid #afb8c1;
-  border-radius: 6px;
-  font: inherit;
-  padding: 0.55rem 0.65rem;
-}
-
-.primary-button,
-.icon-button {
-  border: 1px solid #0969da;
-  border-radius: 6px;
-  cursor: pointer;
-  font: inherit;
-}
-
-.primary-button {
-  background: #0969da;
-  color: white;
-  padding: 0.7rem 0.9rem;
-}
-
-.primary-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.icon-button {
-  aspect-ratio: 1;
-  background: white;
-  color: #0969da;
-  width: 2.5rem;
+  gap: 0.45rem;
 }
 
 .status-chip {
-  background: #dafbe1;
+  background: rgba(116, 185, 139, 0.18);
+  border: 1px solid rgba(116, 185, 139, 0.28);
   border-radius: 999px;
-  color: #116329;
+  color: #23613c;
   font-size: 0.875rem;
-  padding: 0.2rem 0.6rem;
+  padding: 0.35rem 0.8rem;
 }
 
 .report-summary {
   display: grid;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
 .table-wrap {
@@ -422,16 +405,7 @@ select {
 }
 
 .report-table {
-  border-collapse: collapse;
   width: 100%;
-}
-
-.report-table th,
-.report-table td {
-  border-bottom: 1px solid #d8dee4;
-  padding: 0.75rem;
-  text-align: left;
-  vertical-align: top;
 }
 
 .comment-list {
@@ -439,20 +413,8 @@ select {
   padding-left: 1.25rem;
 }
 
-.notice {
-  border-radius: 6px;
-  margin: 0;
-  padding: 0.7rem 0.85rem;
-}
-
-.success {
-  background: #dafbe1;
-  color: #116329;
-}
-
-.error {
-  background: #ffebe9;
-  color: #82071e;
+.report-panel {
+  align-self: start;
 }
 
 .mb-0 {
