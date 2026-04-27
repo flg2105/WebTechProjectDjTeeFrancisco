@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.projectpulse.peereval.dto.PeerEvaluationFormResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationReportResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationSectionReportResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationSubmissionResponse;
 import team.projectpulse.peereval.dto.SubmitPeerEvaluationRequest;
 import team.projectpulse.peereval.service.PeerEvaluationService;
@@ -40,5 +41,14 @@ public class PeerEvaluationController {
       @RequestParam(required = false) LocalDate weekStartDate) {
     return Result.ok("Find Peer Evaluation Report Success",
         peerEvaluationService.findOwnReport(studentUserId, weekStartDate));
+  }
+
+  @GetMapping("/section-report")
+  public Result<PeerEvaluationSectionReportResponse> findSectionReport(
+      @RequestParam Long sectionId,
+      @RequestParam LocalDate weekStartDate) {
+    return Result.ok(
+        "Find Section Peer Evaluation Report Success",
+        peerEvaluationService.findSectionReport(sectionId, weekStartDate));
   }
 }

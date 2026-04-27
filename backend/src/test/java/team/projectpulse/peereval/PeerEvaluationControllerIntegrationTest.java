@@ -1,5 +1,6 @@
 package team.projectpulse.peereval;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -181,6 +182,99 @@ class PeerEvaluationControllerIntegrationTest {
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.flag").value(false))
         .andExpect(jsonPath("$.code").value(CONFLICT));
+  }
+
+  @Test
+  void should_GenerateSectionPeerEvaluationReport_AndShowMissingSubmitters() throws Exception {
+    PeerEvalFixture fixture = createPeerEvalFixture();
+
+    submitEvaluation(
+        fixture.studentTwoId(),
+        fixture.previousWeekStart(),
+        """
+            [
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Strong delivery this week.",
+                "privateComment": "Needs more detail in standups.",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 8},
+                  {"rubricCriterionId": %d, "score": 9}
+                ]
+              },
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Great collaboration.",
+                "privateComment": null,
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 7},
+                  {"rubricCriterionId": %d, "score": 8}
+                ]
+              }
+            ]
+            """.formatted(
+            fixture.studentOneId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId(),
+            fixture.studentThreeId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId()));
+
+    submitEvaluation(
+        fixture.studentThreeId(),
+        fixture.previousWeekStart(),
+        """
+            [
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Consistent progress.",
+                "privateComment": "Could speak up sooner.",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 10},
+                  {"rubricCriterionId": %d, "score": 8}
+                ]
+              },
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Helpful teammate.",
+                "privateComment": "",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 9},
+                  {"rubricCriterionId": %d, "score": 9}
+                ]
+              }
+            ]
+            """.formatted(
+            fixture.studentOneId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId(),
+            fixture.studentTwoId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId()));
+
+    mvc.perform(get("/api/peer-evaluations/section-report")
+            .param("sectionId", fixture.sectionId().toString())
+            .param("weekStartDate", fixture.previousWeekStart().toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.sectionId").value(fixture.sectionId()))
+        .andExpect(jsonPath("$.data.weekStartDate").value(fixture.previousWeekStart().toString()))
+        .andExpect(jsonPath("$.data.maxTotalScore").value(20.00))
+        .andExpect(jsonPath("$.data.students", hasSize(3)))
+        .andExpect(jsonPath("$.data.students[0].studentUserId").value(fixture.studentOneId()))
+        .andExpect(jsonPath("$.data.students[0].averageTotalScore").value(17.50))
+        .andExpect(jsonPath("$.data.students[0].receivedEvaluations").value(2))
+        .andExpect(jsonPath("$.data.students[0].evaluations", hasSize(2)))
+        .andExpect(jsonPath("$.data.students[0].evaluations[0].evaluatorStudentUserId").value(fixture.studentThreeId()))
+        .andExpect(jsonPath("$.data.students[0].evaluations[0].privateComment").value("Could speak up sooner."))
+        .andExpect(jsonPath("$.data.students[1].studentUserId").value(fixture.studentThreeId()))
+        .andExpect(jsonPath("$.data.students[1].receivedEvaluations").value(1))
+        .andExpect(jsonPath("$.data.students[2].studentUserId").value(fixture.studentTwoId()))
+        .andExpect(jsonPath("$.data.students[2].receivedEvaluations").value(1))
+        .andExpect(jsonPath("$.data.missingSubmitters", hasSize(1)))
+        .andExpect(jsonPath("$.data.missingSubmitters[0].studentUserId").value(fixture.studentOneId()))
+        .andExpect(jsonPath("$.data.missingSubmitters[0].studentDisplayName", containsString("One")));
   }
 
   private void submitEvaluation(Long evaluatorStudentUserId, LocalDate weekStartDate, String evaluationsJson)
