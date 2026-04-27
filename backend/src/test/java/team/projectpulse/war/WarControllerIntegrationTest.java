@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static team.projectpulse.system.StatusCode.INVALID_ARGUMENT;
+import static team.projectpulse.system.StatusCode.NOT_FOUND;
 import static team.projectpulse.system.StatusCode.SUCCESS;
 
 import java.time.DayOfWeek;
@@ -128,6 +129,58 @@ class WarControllerIntegrationTest {
         .andExpect(jsonPath("$.message").value("Selected week cannot be in the future"));
   }
 
+  @Test
+  void should_GenerateStudentWarReport_ForDateRange() throws Exception {
+    Long rubricId = createRubric("WAR Report Rubric");
+    LocalDate currentMonday = LocalDate.now().with(DayOfWeek.MONDAY);
+    Long sectionId = createSection("WAR Report Section", rubricId, currentMonday.minusWeeks(4), currentMonday.plusWeeks(2));
+    Long[] weekIds = replaceActiveWeeks(sectionId, currentMonday.minusWeeks(1), currentMonday);
+    Long weekOneId = weekIds[0];
+    Long weekTwoId = weekIds[1];
+    Long studentId = setupStudent("war.report.student@example.edu", "WAR Report Student");
+    Long teamId = createTeam(sectionId, "WAR Report Team");
+    assignStudent(teamId, studentId);
+
+    addActivity(studentId, weekOneId, "DEVELOPMENT", "Implement report endpoint");
+    addActivity(studentId, weekTwoId, "TESTING", "Test report endpoint");
+
+    mvc.perform(get("/api/wars/student-report")
+            .param("studentUserId", String.valueOf(studentId))
+            .param("startActiveWeekId", String.valueOf(weekOneId))
+            .param("endActiveWeekId", String.valueOf(weekTwoId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.sectionId").value(sectionId))
+        .andExpect(jsonPath("$.data.entries.length()").value(2))
+        .andExpect(jsonPath("$.data.entries[0].activeWeekId").value(weekOneId))
+        .andExpect(jsonPath("$.data.entries[0].activities[0].activity").value("Implement report endpoint"))
+        .andExpect(jsonPath("$.data.entries[1].activeWeekId").value(weekTwoId))
+        .andExpect(jsonPath("$.data.entries[1].activities[0].activity").value("Test report endpoint"));
+  }
+
+  @Test
+  void should_ReturnNotFound_When_StudentWarReportHasNoActivities() throws Exception {
+    Long rubricId = createRubric("WAR Report Empty Rubric");
+    LocalDate currentMonday = LocalDate.now().with(DayOfWeek.MONDAY);
+    Long sectionId = createSection("WAR Empty Report Section", rubricId, currentMonday.minusWeeks(4), currentMonday.plusWeeks(2));
+    Long[] weekIds = replaceActiveWeeks(sectionId, currentMonday.minusWeeks(1), currentMonday);
+    Long weekOneId = weekIds[0];
+    Long weekTwoId = weekIds[1];
+    Long studentId = setupStudent("war.report.empty.student@example.edu", "WAR Empty Report Student");
+    Long teamId = createTeam(sectionId, "WAR Empty Report Team");
+    assignStudent(teamId, studentId);
+
+    mvc.perform(get("/api/wars/student-report")
+            .param("studentUserId", String.valueOf(studentId))
+            .param("startActiveWeekId", String.valueOf(weekOneId))
+            .param("endActiveWeekId", String.valueOf(weekTwoId)))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(NOT_FOUND))
+        .andExpect(jsonPath("$.message").value("No WAR report data available for the selected period"));
+  }
+
   private Long createRubric(String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/rubrics")
             .contentType(MediaType.APPLICATION_JSON)
@@ -181,6 +234,24 @@ class WarControllerIntegrationTest {
     return readId(result, "\"activeWeeks\":[{\"id\":");
   }
 
+  private Long[] replaceActiveWeeks(Long sectionId, LocalDate weekOneStartDate, LocalDate weekTwoStartDate) throws Exception {
+    MvcResult result = mvc.perform(put("/api/sections/" + sectionId + "/active-weeks")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                [
+                  {"weekStartDate": "%s", "active": true},
+                  {"weekStartDate": "%s", "active": true}
+                ]
+                """.formatted(weekOneStartDate, weekTwoStartDate)))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    return new Long[] {
+        readNthId(result, "\"activeWeeks\":[", "\"id\":", 0),
+        readNthId(result, "\"activeWeeks\":[", "\"id\":", 1)
+    };
+  }
+
   private Long setupStudent(String email, String displayName) throws Exception {
     MvcResult result = mvc.perform(post("/api/users/student-setup")
             .contentType(MediaType.APPLICATION_JSON)
@@ -222,6 +293,26 @@ class WarControllerIntegrationTest {
         .andExpect(status().isOk());
   }
 
+  private void addActivity(Long studentId, Long activeWeekId, String category, String activity) throws Exception {
+    mvc.perform(post("/api/wars/activities")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "studentUserId": %d,
+                  "activeWeekId": %d,
+                  "category": "%s",
+                  "activity": "%s",
+                  "description": "Report demo activity.",
+                  "hoursPlanned": 1.0,
+                  "hoursActual": 1.0,
+                  "status": "IN_PROGRESS"
+                }
+                """.formatted(studentId, activeWeekId, category, activity)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
+  }
+
   private Long readId(MvcResult result, String marker) throws Exception {
     String body = result.getResponse().getContentAsString();
     int start = body.indexOf(marker);
@@ -234,5 +325,27 @@ class WarControllerIntegrationTest {
       end = body.indexOf("}", start);
     }
     return Long.valueOf(body.substring(start, end));
+  }
+
+  private Long readNthId(MvcResult result, String anchor, String marker, int index) throws Exception {
+    String body = result.getResponse().getContentAsString();
+    int anchorStart = body.indexOf(anchor);
+    if (anchorStart < 0) {
+      throw new IllegalStateException("Anchor not found: " + anchor + " in " + body);
+    }
+    String substring = body.substring(anchorStart);
+    int pos = -1;
+    for (int i = 0; i <= index; i++) {
+      pos = substring.indexOf(marker, pos + 1);
+      if (pos < 0) {
+        throw new IllegalStateException("Marker not found at index " + index + ": " + marker + " in " + substring);
+      }
+    }
+    int start = pos + marker.length();
+    int end = substring.indexOf(",", start);
+    if (end < 0) {
+      end = substring.indexOf("}", start);
+    }
+    return Long.valueOf(substring.substring(start, end));
   }
 }

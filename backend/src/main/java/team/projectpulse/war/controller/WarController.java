@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import team.projectpulse.system.Result;
 import team.projectpulse.war.dto.WarActivityRequest;
 import team.projectpulse.war.dto.WarEntryResponse;
+import team.projectpulse.war.dto.WarStudentReportResponse;
 import team.projectpulse.war.service.WarService;
 
 @Validated
@@ -32,6 +33,16 @@ public class WarController {
       @RequestParam @Positive Long studentUserId,
       @RequestParam @Positive Long activeWeekId) {
     return Result.ok("Find WAR Success", warService.findWar(studentUserId, activeWeekId));
+  }
+
+  @GetMapping("/student-report")
+  public Result<WarStudentReportResponse> findStudentReport(
+      @RequestParam @Positive Long studentUserId,
+      @RequestParam @Positive Long startActiveWeekId,
+      @RequestParam @Positive Long endActiveWeekId) {
+    return Result.ok(
+        "Find Student WAR Report Success",
+        warService.findStudentReport(studentUserId, startActiveWeekId, endActiveWeekId));
   }
 
   @PostMapping("/activities")

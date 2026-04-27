@@ -71,13 +71,15 @@ Member C (Peer evaluation):
 Goal: one coherent demo flow, stable API/UX, basic validations, and deployment readiness.
 
 Member A (Instructor reports):
-- Implement UC-33 (peer eval report of a student) and/or UC-34 (WAR report of the student), whichever is simpler to demo cleanly.
+- Implement UC-34 (WAR report of the student) for the demo.
+- Backend contract for frontend integration: `GET /api/wars/student-report?studentUserId=&startActiveWeekId=&endActiveWeekId=`
 
 Member B (Section reports):
 - Implement UC-31 (peer eval report of entire section) or a pared-down version for demo (paged list + exports later).
 
 Member C (Frontend polish + integration):
 - Ensure end-to-end UX for: Admin setup → Student submit → Instructor view report.
+- Wire the instructor report UI to Member A's UC-34 endpoint.
 - Fix cross-feature UI issues and error states.
 
 ## Daily Integration Rules
