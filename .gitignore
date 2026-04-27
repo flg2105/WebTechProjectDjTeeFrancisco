@@ -17,3 +17,6 @@ backend/.settings/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
+.tmp-upstream/
+.tmp-upstream/
+.tmp-upstream/

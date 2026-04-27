@@ -4,6 +4,7 @@
       <div>
         <p class="eyebrow">UC-7 through UC-14</p>
         <h1>Teams</h1>
+        <p class="helper">Shape section rosters, create teams, and keep assignments organized.</p>
       </div>
       <button class="icon-button" type="button" title="Reload teams" @click="loadAll">R</button>
     </div>
@@ -90,11 +91,14 @@
           Student
           <select v-model.number="assignmentStudentId" required>
             <option disabled value="">Select a student</option>
-            <option v-for="student in students" :key="student.id" :value="student.id">
+            <option v-for="student in availableStudents" :key="student.id" :value="student.id">
               {{ student.displayName }} ({{ student.email }})
             </option>
           </select>
         </label>
+        <p v-if="availableStudents.length === 0" class="empty-state mb-0">
+          Every available student is already assigned to this team.
+        </p>
         <button class="primary-button" type="submit">Assign Student</button>
         <div class="assigned-list">
           <button
@@ -114,7 +118,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { sectionsService } from '../sections/sectionsService'
 import { usersService } from '../users/usersService'
 import { teamsService } from './teamsService'
@@ -132,6 +136,14 @@ const sectionFilter = ref('')
 const assignmentStudentId = ref('')
 const teamForm = reactive({ sectionId: '', name: '' })
 const studentForm = reactive({ displayName: '', email: '' })
+const availableStudents = computed(() => {
+  if (!selectedAssignmentTeam.value) {
+    return students.value
+  }
+
+  const assignedIds = new Set(selectedAssignmentTeam.value.studentUserIds || [])
+  return students.value.filter((student) => !assignedIds.has(student.id))
+})
 
 function sectionName(sectionId) {
   return sections.value.find((section) => section.id === sectionId)?.name || `Section ${sectionId}`
@@ -236,6 +248,9 @@ async function setupStudent() {
 async function assignStudent() {
   error.value = ''
   message.value = ''
+  if (!selectedAssignmentTeam.value || !assignmentStudentId.value) {
+    return
+  }
   try {
     const result = await teamsService.assignStudent(selectedAssignmentTeam.value.id, Number(assignmentStudentId.value))
     selectedAssignmentTeam.value = result.data
@@ -290,120 +305,69 @@ onMounted(loadAll)
 .eyebrow,
 .empty-state,
 .team-item p {
-  color: #57606a;
-}
-
-.eyebrow,
-.team-item p {
-  margin: 0;
-}
-
-h1,
-h2 {
   margin: 0;
 }
 
 .layout-grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
 }
 
 .panel,
 .team-item {
-  border: 1px solid #d8dee4;
-  border-radius: 8px;
-  padding: 1rem;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(208, 218, 230, 0.8);
+  border-radius: 26px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  padding: 1.4rem;
 }
 
 .team-item {
   align-items: center;
   display: flex;
   gap: 1rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.team-item:hover {
+  border-color: rgba(94, 122, 255, 0.24);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
 }
 
 .team-item + .team-item {
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
 }
 
 label {
   display: grid;
-  gap: 0.35rem;
-}
-
-input,
-select {
-  border: 1px solid #afb8c1;
-  border-radius: 6px;
-  font: inherit;
-  padding: 0.55rem 0.65rem;
-}
-
-.primary-button,
-.text-button,
-.icon-button,
-.danger-button,
-.student-chip {
-  border-radius: 6px;
-  cursor: pointer;
-  font: inherit;
-}
-
-.primary-button,
-.text-button,
-.icon-button {
-  border: 1px solid #0969da;
-}
-
-.primary-button {
-  background: #0969da;
-  color: white;
-  padding: 0.65rem 0.85rem;
-}
-
-.text-button,
-.icon-button {
-  background: white;
-  color: #0969da;
-  padding: 0.45rem 0.65rem;
-}
-
-.icon-button {
-  aspect-ratio: 1;
-  width: 2.5rem;
-}
-
-.danger-button {
-  background: white;
-  border: 1px solid #cf222e;
-  color: #cf222e;
-  padding: 0.45rem 0.65rem;
+  gap: 0.45rem;
 }
 
 .assigned-list {
   flex-wrap: wrap;
 }
 
+.mb-0 {
+  margin-bottom: 0;
+}
+
 .student-chip {
-  background: #f6f8fa;
-  border: 1px solid #afb8c1;
-  padding: 0.35rem 0.55rem;
+  background: linear-gradient(180deg, rgba(245, 248, 255, 0.96), rgba(233, 239, 255, 0.96));
+  border: 1px solid rgba(177, 193, 229, 0.82);
+  border-radius: 999px;
+  color: var(--text-strong);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.45rem 0.8rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
 }
 
-.notice {
-  border-radius: 6px;
-  margin: 0;
-  padding: 0.7rem 0.85rem;
-}
-
-.success {
-  background: #dafbe1;
-  color: #116329;
-}
-
-.error {
-  background: #ffebe9;
-  color: #82071e;
+.student-chip:hover {
+  border-color: rgba(94, 122, 255, 0.26);
+  box-shadow: 0 10px 24px rgba(94, 122, 255, 0.16);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 760px) {

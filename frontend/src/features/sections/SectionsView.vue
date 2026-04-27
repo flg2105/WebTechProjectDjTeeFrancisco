@@ -4,6 +4,7 @@
       <div>
         <p class="eyebrow">UC-2 through UC-6, UC-11, UC-18</p>
         <h1>Sections</h1>
+        <p class="helper">Build the course structure, schedule active weeks, and send invites.</p>
       </div>
       <button class="icon-button" type="button" title="Reload sections" @click="loadAll">R</button>
     </div>
@@ -82,19 +83,21 @@
             <button class="text-button" type="button" @click="generateWeeks">Generate Mondays</button>
             <button class="text-button" type="button" @click="addWeek">Add Week</button>
           </div>
-          <div v-for="(week, index) in weekForm" :key="index" class="week-row">
-            <input v-model="week.weekStartDate" required type="date" />
-            <label class="checkbox-label">
-              <input v-model="week.active" type="checkbox" />
-              Active
-            </label>
-            <button class="danger-link" type="button" @click="weekForm.splice(index, 1)">Remove</button>
+          <div class="weeks-list" :class="{ compact: weekForm.length > 5 }">
+            <div v-for="(week, index) in weekForm" :key="index" class="week-row">
+              <input v-model="week.weekStartDate" required type="date" />
+              <label class="checkbox-label">
+                <input v-model="week.active" type="checkbox" />
+                Active
+              </label>
+              <button class="danger-link" type="button" @click="weekForm.splice(index, 1)">Remove</button>
+            </div>
           </div>
           <button class="primary-button" type="submit">Save Active Weeks</button>
         </form>
       </section>
 
-      <section class="panel">
+      <section class="panel invite-panel">
         <h2>Invites and Setup</h2>
         <form class="invite-form" @submit.prevent="inviteStudents">
           <h3>Invite Students</h3>
@@ -371,61 +374,51 @@ onMounted(loadAll)
 .helper,
 .empty-state,
 .list-item p {
-  color: #57606a;
-}
-
-.eyebrow,
-.list-item p {
-  margin: 0;
-}
-
-h1,
-h2,
-h3 {
   margin: 0;
 }
 
 .layout-grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  align-items: start;
+  gap: 1.25rem;
+  grid-template-columns: repeat(2, minmax(300px, 1fr));
 }
 
 .panel,
 .list-item {
-  border: 1px solid #d8dee4;
-  border-radius: 8px;
-  padding: 1rem;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(208, 218, 230, 0.8);
+  border-radius: 26px;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+  padding: 1.4rem;
 }
 
 .list-item {
   display: flex;
-  justify-content: space-between;
   gap: 1rem;
+  justify-content: space-between;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.list-item:hover {
+  border-color: rgba(94, 122, 255, 0.24);
+  box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
+  transform: translateY(-2px);
 }
 
 .list-item + .list-item {
-  margin-top: 0.75rem;
+  margin-top: 0.85rem;
 }
 
 .two-column {
   display: grid;
-  gap: 0.75rem;
+  gap: 0.9rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 label {
   display: grid;
-  gap: 0.35rem;
-}
-
-input,
-textarea,
-select {
-  border: 1px solid #afb8c1;
-  border-radius: 6px;
-  font: inherit;
-  padding: 0.55rem 0.65rem;
+  gap: 0.45rem;
 }
 
 .search-row input,
@@ -435,59 +428,32 @@ select {
 
 .checkbox-label {
   align-items: center;
-  display: flex;
-  gap: 0.4rem;
+  display: inline-flex;
+  gap: 0.5rem;
 }
 
-.primary-button,
-.text-button,
-.icon-button {
-  border: 1px solid #0969da;
-  border-radius: 6px;
-  cursor: pointer;
-  font: inherit;
+.weeks-list {
+  display: grid;
+  gap: 0.8rem;
 }
 
-.primary-button {
-  background: #0969da;
-  color: white;
-  padding: 0.65rem 0.85rem;
+.weeks-list.compact {
+  max-height: 23rem;
+  overflow-y: auto;
+  padding-right: 0.25rem;
 }
 
-.text-button,
-.icon-button {
-  background: white;
-  color: #0969da;
-  padding: 0.45rem 0.65rem;
-}
-
-.icon-button {
-  aspect-ratio: 1;
-  width: 2.5rem;
+.invite-panel {
+  align-self: start;
 }
 
 .danger-link {
   background: transparent;
   border: 0;
-  color: #cf222e;
+  color: var(--danger-strong);
   cursor: pointer;
+  font: inherit;
   padding: 0;
-}
-
-.notice {
-  border-radius: 6px;
-  margin: 0;
-  padding: 0.7rem 0.85rem;
-}
-
-.success {
-  background: #dafbe1;
-  color: #116329;
-}
-
-.error {
-  background: #ffebe9;
-  color: #82071e;
 }
 
 @media (max-width: 760px) {
