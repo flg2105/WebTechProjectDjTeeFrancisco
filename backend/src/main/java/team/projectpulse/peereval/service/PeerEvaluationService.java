@@ -30,6 +30,9 @@ import team.projectpulse.peereval.dto.PeerEvaluationSectionEvaluationDetailRespo
 import team.projectpulse.peereval.dto.PeerEvaluationSectionMissingSubmissionResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationSectionReportResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationSectionStudentReportResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationStudentEvaluationDetailResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationStudentReportResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationStudentWeeklyReportResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationSubmissionResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationTeammateResponse;
 import team.projectpulse.peereval.dto.SubmitPeerEvaluationRequest;
@@ -246,6 +249,128 @@ public class PeerEvaluationService {
         maxTotalScore(section.getRubricId()),
         studentReports,
         missingSubmitters);
+  }
+
+  public PeerEvaluationStudentReportResponse findStudentReport(Long studentUserId, Long startActiveWeekId, Long endActiveWeekId) {
+    validatePositive(studentUserId, "studentUserId");
+    validatePositive(startActiveWeekId, "startActiveWeekId");
+    validatePositive(endActiveWeekId, "endActiveWeekId");
+
+    StudentContext context = loadStudentContext(studentUserId);
+    ActiveWeek startWeek = getActiveWeek(startActiveWeekId);
+    ActiveWeek endWeek = getActiveWeek(endActiveWeekId);
+    validateReportWeek(startWeek);
+    validateReportWeek(endWeek);
+    validateReportWeeksBelongToSection(context.section().getId(), startWeek, endWeek);
+    validateReportRange(startWeek, endWeek);
+
+    BigDecimal maxTotalScore = maxTotalScore(context.section().getRubricId());
+    List<ActiveWeek> weeksInRange = activeWeekRepository.findBySectionIdOrderByWeekStartDateAsc(context.section().getId()).stream()
+        .filter(ActiveWeek::isActive)
+        .filter(week -> !week.getWeekStartDate().isBefore(startWeek.getWeekStartDate()))
+        .filter(week -> !week.getWeekStartDate().isAfter(endWeek.getWeekStartDate()))
+        .toList();
+
+    Map<Long, ProjectUser> studentsById = loadStudents(context.memberships().stream()
+        .map(TeamMembership::getStudentUserId)
+        .collect(LinkedHashSet::new, Set::add, Set::addAll));
+
+    List<PeerEvaluationStudentWeeklyReportResponse> weeklyReports = weeksInRange.stream()
+        .map(week -> toWeeklyStudentReport(context, week.getWeekStartDate(), studentsById))
+        .toList();
+
+    boolean hasAnyEvaluation = weeklyReports.stream().anyMatch(report -> report.receivedEvaluations() > 0);
+    if (!hasAnyEvaluation) {
+      throw new ApiException(StatusCode.NOT_FOUND, "No peer evaluation report data available for the selected period");
+    }
+
+    return new PeerEvaluationStudentReportResponse(
+        context.student().getId(),
+        context.student().getDisplayName(),
+        context.section().getId(),
+        context.team().getId(),
+        context.team().getName(),
+        startActiveWeekId,
+        endActiveWeekId,
+        startWeek.getWeekStartDate(),
+        endWeek.getWeekStartDate(),
+        maxTotalScore,
+        weeklyReports);
+  }
+
+  private PeerEvaluationStudentWeeklyReportResponse toWeeklyStudentReport(
+      StudentContext context,
+      LocalDate weekStartDate,
+      Map<Long, ProjectUser> studentsById) {
+    List<PeerEvaluationStudentEvaluationDetailResponse> evaluations = submissionRepository
+        .findByTeamIdAndWeekStartDate(context.team().getId(), weekStartDate)
+        .stream()
+        .filter(submission -> !Objects.equals(submission.getEvaluatorStudentUserId(), context.student().getId()))
+        .flatMap(submission -> submission.getEntries().stream()
+            .filter(entry -> Objects.equals(entry.getEvaluateeStudentUserId(), context.student().getId()))
+            .map(entry -> toStudentEvaluationDetail(submission, entry, studentsById)))
+        .sorted(Comparator.comparing(
+            PeerEvaluationStudentEvaluationDetailResponse::evaluatorDisplayName,
+            String.CASE_INSENSITIVE_ORDER))
+        .toList();
+
+    List<BigDecimal> totals = evaluations.stream()
+        .map(PeerEvaluationStudentEvaluationDetailResponse::totalScore)
+        .toList();
+
+    return new PeerEvaluationStudentWeeklyReportResponse(
+        weekStartDate,
+        average(totals),
+        evaluations.size(),
+        evaluations);
+  }
+
+  private PeerEvaluationStudentEvaluationDetailResponse toStudentEvaluationDetail(
+      PeerEvaluationSubmission submission,
+      PeerEvaluationEntry entry,
+      Map<Long, ProjectUser> studentsById) {
+    ProjectUser evaluator = studentsById.get(submission.getEvaluatorStudentUserId());
+    if (evaluator == null) {
+      throw new ApiException(StatusCode.NOT_FOUND, "Student not found with id " + submission.getEvaluatorStudentUserId());
+    }
+
+    BigDecimal totalScore = entry.getScores().stream()
+        .map(PeerEvaluationScore::getScore)
+        .reduce(BigDecimal.ZERO, BigDecimal::add)
+        .setScale(2, RoundingMode.HALF_UP);
+
+    return new PeerEvaluationStudentEvaluationDetailResponse(
+        submission.getEvaluatorStudentUserId(),
+        evaluator.getDisplayName(),
+        totalScore,
+        entry.getPublicComment(),
+        entry.getPrivateComment());
+  }
+
+  private void validateReportWeek(ActiveWeek activeWeek) {
+    if (!activeWeek.isActive()) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "Selected week is inactive");
+    }
+    if (activeWeek.getWeekStartDate().isAfter(LocalDate.now(clock))) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "Selected week cannot be in the future");
+    }
+  }
+
+  private ActiveWeek getActiveWeek(Long activeWeekId) {
+    return activeWeekRepository.findById(activeWeekId)
+        .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "Active week not found with id " + activeWeekId));
+  }
+
+  private void validateReportWeeksBelongToSection(Long sectionId, ActiveWeek startWeek, ActiveWeek endWeek) {
+    if (!sectionId.equals(startWeek.getSectionId()) || !sectionId.equals(endWeek.getSectionId())) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "Start and end weeks must belong to the student's section");
+    }
+  }
+
+  private void validateReportRange(ActiveWeek startWeek, ActiveWeek endWeek) {
+    if (startWeek.getWeekStartDate().isAfter(endWeek.getWeekStartDate())) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "Start week must be on or before end week");
+    }
   }
 
   private void validateEvaluations(

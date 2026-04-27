@@ -8,11 +8,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static team.projectpulse.system.StatusCode.CONFLICT;
+import static team.projectpulse.system.StatusCode.NOT_FOUND;
 import static team.projectpulse.system.StatusCode.SUCCESS;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -277,6 +280,109 @@ class PeerEvaluationControllerIntegrationTest {
         .andExpect(jsonPath("$.data.missingSubmitters[0].studentDisplayName", containsString("One")));
   }
 
+  @Test
+  void should_GenerateStudentPeerEvaluationReport_ForPeriod() throws Exception {
+    PeerEvalFixture fixture = createPeerEvalFixture();
+
+    submitEvaluation(
+        fixture.studentTwoId(),
+        fixture.previousWeekStart(),
+        """
+            [
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Strong delivery this week.",
+                "privateComment": "Needs more detail in standups.",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 8},
+                  {"rubricCriterionId": %d, "score": 9}
+                ]
+              },
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Great collaboration.",
+                "privateComment": null,
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 7},
+                  {"rubricCriterionId": %d, "score": 8}
+                ]
+              }
+            ]
+            """.formatted(
+            fixture.studentOneId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId(),
+            fixture.studentThreeId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId()));
+
+    submitEvaluation(
+        fixture.studentThreeId(),
+        fixture.previousWeekStart(),
+        """
+            [
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Consistent progress.",
+                "privateComment": "Could speak up sooner.",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 10},
+                  {"rubricCriterionId": %d, "score": 8}
+                ]
+              },
+              {
+                "evaluateeStudentUserId": %d,
+                "publicComment": "Helpful teammate.",
+                "privateComment": "",
+                "scores": [
+                  {"rubricCriterionId": %d, "score": 9},
+                  {"rubricCriterionId": %d, "score": 9}
+                ]
+              }
+            ]
+            """.formatted(
+            fixture.studentOneId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId(),
+            fixture.studentTwoId(),
+            fixture.criterionOneId(),
+            fixture.criterionTwoId()));
+
+    mvc.perform(get("/api/peer-evaluations/student-report")
+            .param("studentUserId", fixture.studentOneId().toString())
+            .param("startActiveWeekId", fixture.previousActiveWeekId().toString())
+            .param("endActiveWeekId", fixture.currentActiveWeekId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.studentUserId").value(fixture.studentOneId()))
+        .andExpect(jsonPath("$.data.startWeekStartDate").value(fixture.previousWeekStart().toString()))
+        .andExpect(jsonPath("$.data.endWeekStartDate").value(fixture.currentWeekStart().toString()))
+        .andExpect(jsonPath("$.data.maxTotalScore").value(20.00))
+        .andExpect(jsonPath("$.data.weeks.length()").value(2))
+        .andExpect(jsonPath("$.data.weeks[0].weekStartDate").value(fixture.previousWeekStart().toString()))
+        .andExpect(jsonPath("$.data.weeks[0].averageTotalScore").value(17.50))
+        .andExpect(jsonPath("$.data.weeks[0].receivedEvaluations").value(2))
+        .andExpect(jsonPath("$.data.weeks[0].evaluations", hasSize(2)))
+        .andExpect(jsonPath("$.data.weeks[0].evaluations[0].privateComment").value("Could speak up sooner."))
+        .andExpect(jsonPath("$.data.weeks[1].weekStartDate").value(fixture.currentWeekStart().toString()))
+        .andExpect(jsonPath("$.data.weeks[1].receivedEvaluations").value(0));
+  }
+
+  @Test
+  void should_ReturnNotFound_When_StudentPeerEvaluationReportHasNoEvaluations() throws Exception {
+    PeerEvalFixture fixture = createPeerEvalFixture();
+
+    mvc.perform(get("/api/peer-evaluations/student-report")
+            .param("studentUserId", fixture.studentOneId().toString())
+            .param("startActiveWeekId", fixture.previousActiveWeekId().toString())
+            .param("endActiveWeekId", fixture.currentActiveWeekId().toString()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(NOT_FOUND))
+        .andExpect(jsonPath("$.message").value("No peer evaluation report data available for the selected period"));
+  }
+
   private void submitEvaluation(Long evaluatorStudentUserId, LocalDate weekStartDate, String evaluationsJson)
       throws Exception {
     mvc.perform(post("/api/peer-evaluations")
@@ -303,6 +409,8 @@ class PeerEvaluationControllerIntegrationTest {
     Long criterionTwoId = findCriterionId(rubricId, 1);
     Long sectionId = createSection(rubricId);
     createActiveWeeks(sectionId, previousWeekStart, currentWeekStart);
+    Long previousActiveWeekId = findActiveWeekId(sectionId, previousWeekStart);
+    Long currentActiveWeekId = findActiveWeekId(sectionId, currentWeekStart);
 
     Long studentOneId = setupStudent("phase3.student.one.%d@example.edu".formatted(unique), "Phase Three Student One");
     Long studentTwoId = setupStudent("phase3.student.two.%d@example.edu".formatted(unique), "Phase Three Student Two");
@@ -322,6 +430,8 @@ class PeerEvaluationControllerIntegrationTest {
         studentOneId,
         studentTwoId,
         studentThreeId,
+        previousActiveWeekId,
+        currentActiveWeekId,
         previousWeekStart,
         currentWeekStart);
   }
@@ -400,6 +510,20 @@ class PeerEvaluationControllerIntegrationTest {
         .andExpect(status().isOk());
   }
 
+  private Long findActiveWeekId(Long sectionId, LocalDate weekStartDate) throws Exception {
+    MvcResult result = mvc.perform(get("/api/sections/" + sectionId))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    String body = result.getResponse().getContentAsString();
+    Pattern pattern = Pattern.compile("\\{\"id\":(\\d+),\"weekStartDate\":\"" + weekStartDate + "\"");
+    Matcher matcher = pattern.matcher(body);
+    if (!matcher.find()) {
+      throw new IllegalStateException("Active week id not found for " + weekStartDate + " in " + body);
+    }
+    return Long.valueOf(matcher.group(1));
+  }
+
   private Long setupStudent(String email, String displayName) throws Exception {
     MvcResult result = mvc.perform(post("/api/users/student-setup")
             .contentType(MediaType.APPLICATION_JSON)
@@ -456,6 +580,8 @@ class PeerEvaluationControllerIntegrationTest {
       Long studentOneId,
       Long studentTwoId,
       Long studentThreeId,
+      Long previousActiveWeekId,
+      Long currentActiveWeekId,
       LocalDate previousWeekStart,
       LocalDate currentWeekStart) {
   }

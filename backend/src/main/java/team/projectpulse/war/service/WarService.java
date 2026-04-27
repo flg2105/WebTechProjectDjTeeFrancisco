@@ -1,7 +1,8 @@
 package team.projectpulse.war.service;
 
-import java.util.List;
+import java.time.LocalDate;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,8 +21,8 @@ import team.projectpulse.war.domain.WarEntry;
 import team.projectpulse.war.dto.WarActivityRequest;
 import team.projectpulse.war.dto.WarActivityResponse;
 import team.projectpulse.war.dto.WarEntryResponse;
+import team.projectpulse.war.dto.WarStudentReportResponse;
 import team.projectpulse.war.repository.WarEntryRepository;
-import java.time.LocalDate;
 
 @Service
 @Transactional(readOnly = true)
@@ -50,6 +51,49 @@ public class WarService {
     return warEntryRepository.findByActiveWeekIdAndStudentUserId(activeWeekId, studentUserId)
         .map(entry -> toResponse(entry, context.activeWeek()))
         .orElseGet(() -> emptyResponse(context.activeWeek(), context.teamId(), studentUserId));
+  }
+
+  public WarStudentReportResponse findStudentReport(Long studentUserId, Long startActiveWeekId, Long endActiveWeekId) {
+    validatePositive(studentUserId, "studentUserId");
+    validatePositive(startActiveWeekId, "startActiveWeekId");
+    validatePositive(endActiveWeekId, "endActiveWeekId");
+    validateStudent(studentUserId);
+
+    ActiveWeek startWeek = getActiveWeek(startActiveWeekId);
+    ActiveWeek endWeek = getActiveWeek(endActiveWeekId);
+    validateWeek(startWeek);
+    validateWeek(endWeek);
+    validateSameSection(startWeek, endWeek);
+    validateChronologicalRange(startWeek, endWeek);
+
+    Long sectionId = startWeek.getSectionId();
+    Long teamId = resolveTeamId(studentUserId, sectionId);
+
+    List<ActiveWeek> weeksInRange = activeWeekRepository.findBySectionIdOrderByWeekStartDateAsc(sectionId).stream()
+        .filter(ActiveWeek::isActive)
+        .filter(week -> !week.getWeekStartDate().isBefore(startWeek.getWeekStartDate()))
+        .filter(week -> !week.getWeekStartDate().isAfter(endWeek.getWeekStartDate()))
+        .toList();
+
+    List<WarEntryResponse> entries = weeksInRange.stream()
+        .map(week -> warEntryRepository.findByActiveWeekIdAndStudentUserId(week.getId(), studentUserId)
+            .map(entry -> toResponse(entry, week))
+            .orElseGet(() -> emptyResponse(week, teamId, studentUserId)))
+        .toList();
+
+    boolean hasAnyActivity = entries.stream().anyMatch(entry -> !entry.activities().isEmpty());
+    if (!hasAnyActivity) {
+      throw new ApiException(StatusCode.NOT_FOUND, "No WAR report data available for the selected period");
+    }
+
+    return new WarStudentReportResponse(
+        studentUserId,
+        sectionId,
+        startActiveWeekId,
+        endActiveWeekId,
+        startWeek.getWeekStartDate(),
+        endWeek.getWeekStartDate(),
+        entries);
   }
 
   @Transactional
@@ -123,6 +167,18 @@ public class WarService {
     }
     if (activeWeek.getWeekStartDate().isAfter(LocalDate.now())) {
       throw new ApiException(StatusCode.INVALID_ARGUMENT, "Selected week cannot be in the future");
+    }
+  }
+
+  private void validateSameSection(ActiveWeek startWeek, ActiveWeek endWeek) {
+    if (!startWeek.getSectionId().equals(endWeek.getSectionId())) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "Start and end weeks must be in the same section");
+    }
+  }
+
+  private void validateChronologicalRange(ActiveWeek startWeek, ActiveWeek endWeek) {
+    if (startWeek.getWeekStartDate().isAfter(endWeek.getWeekStartDate())) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "Start week must be on or before end week");
     }
   }
 

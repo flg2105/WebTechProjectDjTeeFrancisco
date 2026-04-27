@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import team.projectpulse.peereval.dto.PeerEvaluationFormResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationReportResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationSectionReportResponse;
+import team.projectpulse.peereval.dto.PeerEvaluationStudentReportResponse;
 import team.projectpulse.peereval.dto.PeerEvaluationSubmissionResponse;
 import team.projectpulse.peereval.dto.SubmitPeerEvaluationRequest;
 import team.projectpulse.peereval.service.PeerEvaluationService;
@@ -50,5 +51,15 @@ public class PeerEvaluationController {
     return Result.ok(
         "Find Section Peer Evaluation Report Success",
         peerEvaluationService.findSectionReport(sectionId, weekStartDate));
+  }
+
+  @GetMapping("/student-report")
+  public Result<PeerEvaluationStudentReportResponse> findStudentReport(
+      @RequestParam Long studentUserId,
+      @RequestParam Long startActiveWeekId,
+      @RequestParam Long endActiveWeekId) {
+    return Result.ok(
+        "Find Student Peer Evaluation Report Success",
+        peerEvaluationService.findStudentReport(studentUserId, startActiveWeekId, endActiveWeekId));
   }
 }
