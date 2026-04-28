@@ -162,7 +162,8 @@ class TeamInstructorAssignmentIntegrationTest {
             .content("""
                 {
                   "email": "%s",
-                  "displayName": "%s"
+                  "displayName": "%s",
+                  "password": "TestPassword123!"
                 }
                 """.formatted(email, displayName)))
         .andExpect(status().isOk())
