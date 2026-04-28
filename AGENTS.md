@@ -111,6 +111,10 @@ Always:
 6. Before pushing, update `/docs/final-steps-checklist.md` by checking off any completed items
 6. Before starting a new phase, confirm you are on an up-to-date `main` (e.g., `git checkout main` and `git pull --ff-only`) before creating a new branch
 
+## Running Tests
+
+- Backend tests: run from `backend/` using the Maven wrapper: `./mvnw test` (not `mvn test`).
+
 ---
 
 ## When Unsure

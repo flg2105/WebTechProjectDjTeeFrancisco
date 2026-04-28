@@ -13,4 +13,5 @@ public record SectionResponse(
     Long rubricId,
     Instant createdAt,
     Instant updatedAt,
-    List<ActiveWeekResponse> activeWeeks) {}
+    List<ActiveWeekResponse> activeWeeks,
+    List<Long> instructorUserIds) {}

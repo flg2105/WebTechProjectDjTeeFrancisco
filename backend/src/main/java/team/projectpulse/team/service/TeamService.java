@@ -4,13 +4,17 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import team.projectpulse.section.repository.SectionRepository;
+import team.projectpulse.section.repository.SectionInstructorAssignmentRepository;
 import team.projectpulse.system.ApiException;
 import team.projectpulse.system.StatusCode;
 import team.projectpulse.team.domain.Team;
+import team.projectpulse.team.domain.TeamInstructorAssignment;
 import team.projectpulse.team.domain.TeamMembership;
+import team.projectpulse.team.dto.AssignInstructorsRequest;
 import team.projectpulse.team.dto.AssignStudentRequest;
 import team.projectpulse.team.dto.TeamRequest;
 import team.projectpulse.team.dto.TeamResponse;
+import team.projectpulse.team.repository.TeamInstructorAssignmentRepository;
 import team.projectpulse.team.repository.TeamMembershipRepository;
 import team.projectpulse.team.repository.TeamRepository;
 import team.projectpulse.user.domain.UserRole;
@@ -21,17 +25,23 @@ import team.projectpulse.user.repository.UserRepository;
 public class TeamService {
   private final TeamRepository teamRepository;
   private final TeamMembershipRepository teamMembershipRepository;
+  private final TeamInstructorAssignmentRepository teamInstructorAssignmentRepository;
   private final SectionRepository sectionRepository;
+  private final SectionInstructorAssignmentRepository sectionInstructorAssignmentRepository;
   private final UserRepository userRepository;
 
   public TeamService(
       TeamRepository teamRepository,
       TeamMembershipRepository teamMembershipRepository,
+      TeamInstructorAssignmentRepository teamInstructorAssignmentRepository,
       SectionRepository sectionRepository,
+      SectionInstructorAssignmentRepository sectionInstructorAssignmentRepository,
       UserRepository userRepository) {
     this.teamRepository = teamRepository;
     this.teamMembershipRepository = teamMembershipRepository;
+    this.teamInstructorAssignmentRepository = teamInstructorAssignmentRepository;
     this.sectionRepository = sectionRepository;
+    this.sectionInstructorAssignmentRepository = sectionInstructorAssignmentRepository;
     this.userRepository = userRepository;
   }
 
@@ -101,6 +111,31 @@ public class TeamService {
     return toResponse(teamRepository.save(team));
   }
 
+  @Transactional
+  public TeamResponse assignInstructors(Long teamId, AssignInstructorsRequest request) {
+    Team team = getTeam(teamId);
+    for (Long instructorUserId : request.instructorUserIds()) {
+      validateInstructor(instructorUserId);
+      validateInstructorInSection(instructorUserId, team.getSectionId());
+      if (!teamInstructorAssignmentRepository.existsByTeamIdAndInstructorUserId(teamId, instructorUserId)) {
+        TeamInstructorAssignment assignment = new TeamInstructorAssignment();
+        assignment.setTeamId(teamId);
+        assignment.setInstructorUserId(instructorUserId);
+        teamInstructorAssignmentRepository.save(assignment);
+      }
+    }
+    team.touch();
+    return toResponse(teamRepository.save(team));
+  }
+
+  @Transactional
+  public TeamResponse removeInstructor(Long teamId, Long instructorUserId) {
+    Team team = getTeam(teamId);
+    teamInstructorAssignmentRepository.deleteByTeamIdAndInstructorUserId(teamId, instructorUserId);
+    team.touch();
+    return toResponse(teamRepository.save(team));
+  }
+
   private Team getTeam(Long id) {
     return teamRepository.findById(id)
         .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "Team not found with id " + id));
@@ -121,10 +156,31 @@ public class TeamService {
     }
   }
 
+  private void validateInstructor(Long instructorUserId) {
+    boolean validInstructor = userRepository.findById(instructorUserId)
+        .map(user -> user.getRole() == UserRole.INSTRUCTOR)
+        .orElse(false);
+    if (!validInstructor) {
+      throw new ApiException(StatusCode.NOT_FOUND, "Instructor not found with id " + instructorUserId);
+    }
+  }
+
+  private void validateInstructorInSection(Long instructorUserId, Long sectionId) {
+    if (!sectionInstructorAssignmentRepository.existsBySectionIdAndInstructorUserId(sectionId, instructorUserId)) {
+      throw new ApiException(
+          StatusCode.INVALID_ARGUMENT,
+          "Instructor %d is not assigned to section %d".formatted(instructorUserId, sectionId));
+    }
+  }
+
   private TeamResponse toResponse(Team team) {
     List<Long> studentUserIds = teamMembershipRepository.findByTeamIdOrderByStudentUserIdAsc(team.getId())
         .stream()
         .map(TeamMembership::getStudentUserId)
+        .toList();
+    List<Long> instructorUserIds = teamInstructorAssignmentRepository.findByTeamIdOrderByInstructorUserIdAsc(team.getId())
+        .stream()
+        .map(TeamInstructorAssignment::getInstructorUserId)
         .toList();
     return new TeamResponse(
         team.getId(),
@@ -132,6 +188,7 @@ public class TeamService {
         team.getName(),
         team.getCreatedAt(),
         team.getUpdatedAt(),
-        studentUserIds);
+        studentUserIds,
+        instructorUserIds);
   }
 }
