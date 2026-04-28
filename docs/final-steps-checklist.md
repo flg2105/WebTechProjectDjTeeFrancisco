@@ -23,11 +23,11 @@ Related planning:
 ## Backend (Spring Boot) — Missing / Incomplete Use Cases
 
 ### Instructor ↔ Team assignment (missing)
-- [ ] UC-19: Admin assigns instructors to senior design teams (`requirements/3_Use_Cases.md`)
-- [ ] UC-20: Admin removes an instructor from a senior design team (`requirements/3_Use_Cases.md`)
+- [x] UC-19: Admin assigns instructors to senior design teams (`requirements/3_Use_Cases.md`)
+- [x] UC-20: Admin removes an instructor from a senior design team (`requirements/3_Use_Cases.md`)
 
 Notes:
-- Current team APIs are student-only (`/api/teams/*`) and `TeamResponse` only returns `studentUserIds`.
+- Team APIs now include instructor assignment endpoints and `TeamResponse` includes `instructorUserIds`.
 - Align storage and module boundaries with `docs/database-design.md` and layering rules in `docs/architecture.md`.
 
 ### Instructor management (missing/partial)
@@ -68,7 +68,7 @@ Notes:
 
 ### Instructor administration (blocked by backend gaps)
 - [ ] Add UI for instructor view/deactivate/reactivate (UC-22..UC-24) once backend APIs exist (`requirements/3_Use_Cases.md`)
-- [ ] Add UI for assigning/removing instructors to teams (UC-19/UC-20) once backend APIs exist (`requirements/3_Use_Cases.md`)
+- [x] Add UI for assigning/removing instructors to teams (UC-19/UC-20) once backend APIs exist (`requirements/3_Use_Cases.md`)
 
 ---
 

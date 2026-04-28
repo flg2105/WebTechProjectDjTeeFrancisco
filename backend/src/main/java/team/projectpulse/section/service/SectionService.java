@@ -8,14 +8,19 @@ import org.springframework.transaction.annotation.Transactional;
 import team.projectpulse.rubric.repository.RubricRepository;
 import team.projectpulse.section.domain.ActiveWeek;
 import team.projectpulse.section.domain.Section;
+import team.projectpulse.section.domain.SectionInstructorAssignment;
 import team.projectpulse.section.dto.ActiveWeekRequest;
 import team.projectpulse.section.dto.ActiveWeekResponse;
+import team.projectpulse.section.dto.AssignSectionInstructorsRequest;
 import team.projectpulse.section.dto.SectionRequest;
 import team.projectpulse.section.dto.SectionResponse;
 import team.projectpulse.section.repository.ActiveWeekRepository;
+import team.projectpulse.section.repository.SectionInstructorAssignmentRepository;
 import team.projectpulse.section.repository.SectionRepository;
 import team.projectpulse.system.ApiException;
 import team.projectpulse.system.StatusCode;
+import team.projectpulse.user.domain.UserRole;
+import team.projectpulse.user.repository.UserRepository;
 
 @Service
 @Transactional(readOnly = true)
@@ -23,14 +28,20 @@ public class SectionService {
   private final SectionRepository sectionRepository;
   private final ActiveWeekRepository activeWeekRepository;
   private final RubricRepository rubricRepository;
+  private final SectionInstructorAssignmentRepository sectionInstructorAssignmentRepository;
+  private final UserRepository userRepository;
 
   public SectionService(
       SectionRepository sectionRepository,
       ActiveWeekRepository activeWeekRepository,
-      RubricRepository rubricRepository) {
+      RubricRepository rubricRepository,
+      SectionInstructorAssignmentRepository sectionInstructorAssignmentRepository,
+      UserRepository userRepository) {
     this.sectionRepository = sectionRepository;
     this.activeWeekRepository = activeWeekRepository;
     this.rubricRepository = rubricRepository;
+    this.sectionInstructorAssignmentRepository = sectionInstructorAssignmentRepository;
+    this.userRepository = userRepository;
   }
 
   public List<SectionResponse> findAll(String name) {
@@ -97,6 +108,30 @@ public class SectionService {
     return toResponse(sectionRepository.save(section));
   }
 
+  @Transactional
+  public SectionResponse assignInstructors(Long sectionId, AssignSectionInstructorsRequest request) {
+    Section section = getSection(sectionId);
+    for (Long instructorUserId : request.instructorUserIds()) {
+      validateInstructor(instructorUserId);
+      if (!sectionInstructorAssignmentRepository.existsBySectionIdAndInstructorUserId(sectionId, instructorUserId)) {
+        SectionInstructorAssignment assignment = new SectionInstructorAssignment();
+        assignment.setSectionId(sectionId);
+        assignment.setInstructorUserId(instructorUserId);
+        sectionInstructorAssignmentRepository.save(assignment);
+      }
+    }
+    section.touch();
+    return toResponse(sectionRepository.save(section));
+  }
+
+  @Transactional
+  public SectionResponse removeInstructor(Long sectionId, Long instructorUserId) {
+    Section section = getSection(sectionId);
+    sectionInstructorAssignmentRepository.deleteBySectionIdAndInstructorUserId(sectionId, instructorUserId);
+    section.touch();
+    return toResponse(sectionRepository.save(section));
+  }
+
   private Section getSection(Long id) {
     return sectionRepository.findById(id)
         .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "Section not found with id " + id));
@@ -122,10 +157,25 @@ public class SectionService {
     }
   }
 
+  private void validateInstructor(Long instructorUserId) {
+    boolean validInstructor = userRepository.findById(instructorUserId)
+        .map(user -> user.getRole() == UserRole.INSTRUCTOR)
+        .orElse(false);
+    if (!validInstructor) {
+      throw new ApiException(StatusCode.NOT_FOUND, "Instructor not found with id " + instructorUserId);
+    }
+  }
+
   private SectionResponse toResponse(Section section) {
     List<ActiveWeekResponse> activeWeeks = activeWeekRepository.findBySectionIdOrderByWeekStartDateAsc(section.getId())
         .stream()
         .map(week -> new ActiveWeekResponse(week.getId(), week.getWeekStartDate(), week.isActive()))
+        .toList();
+
+    List<Long> instructorUserIds = sectionInstructorAssignmentRepository
+        .findBySectionIdOrderByInstructorUserIdAsc(section.getId())
+        .stream()
+        .map(SectionInstructorAssignment::getInstructorUserId)
         .toList();
 
     return new SectionResponse(
@@ -137,6 +187,7 @@ public class SectionService {
         section.getRubricId(),
         section.getCreatedAt(),
         section.getUpdatedAt(),
-        activeWeeks);
+        activeWeeks,
+        instructorUserIds);
   }
 }

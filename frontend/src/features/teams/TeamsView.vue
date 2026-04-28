@@ -71,12 +71,18 @@
       <article v-for="team in teams" v-else :key="team.id" class="team-item">
         <div>
           <strong>{{ team.name }}</strong>
-          <p>{{ sectionName(team.sectionId) }} | {{ team.studentUserIds.length }} students</p>
+          <p>
+            {{ sectionName(team.sectionId) }} |
+            {{ team.studentUserIds?.length || 0 }} students |
+            {{ team.instructorUserIds?.length || 0 }} instructors
+          </p>
           <p v-if="team.studentUserIds.length">Student IDs: {{ team.studentUserIds.join(', ') }}</p>
+          <p v-if="team.instructorUserIds?.length">Instructor IDs: {{ team.instructorUserIds.join(', ') }}</p>
         </div>
         <div class="button-row">
           <button class="text-button" type="button" @click="selectTeam(team)">Edit</button>
-          <button class="text-button" type="button" @click="selectedAssignmentTeam = team">Assign</button>
+          <button class="text-button" type="button" @click="selectedAssignmentTeam = team">Assign Students</button>
+          <button class="text-button" type="button" @click="selectedInstructorAssignmentTeam = team">Assign Instructors</button>
           <button class="danger-button" type="button" @click="deleteTeam(team)">Delete</button>
         </div>
       </article>
@@ -114,6 +120,39 @@
         </div>
       </form>
     </section>
+
+    <section class="panel">
+      <h2>Assign Instructors</h2>
+      <div v-if="!selectedInstructorAssignmentTeam" class="empty-state">Choose Assign Instructors on a team.</div>
+      <form v-else class="assignment-form" @submit.prevent="assignInstructor">
+        <strong>{{ selectedInstructorAssignmentTeam.name }}</strong>
+        <label>
+          Instructor
+          <select v-model.number="assignmentInstructorId" required>
+            <option disabled value="">Select an instructor</option>
+            <option v-for="instructor in availableInstructors" :key="instructor.id" :value="instructor.id">
+              {{ instructor.displayName }} ({{ instructor.email }})
+            </option>
+          </select>
+        </label>
+        <p v-if="availableInstructors.length === 0" class="empty-state mb-0">
+          Every available instructor is already assigned to this team.
+        </p>
+        <button class="primary-button" type="submit">Assign Instructor</button>
+        <div class="assigned-list">
+          <button
+            v-for="instructorId in selectedInstructorAssignmentTeam.instructorUserIds || []"
+            :key="instructorId"
+            class="student-chip"
+            type="button"
+            title="Remove instructor from team"
+            @click="removeInstructor(instructorId)"
+          >
+            {{ instructorLabel(instructorId) }} x
+          </button>
+        </div>
+      </form>
+    </section>
   </section>
 </template>
 
@@ -126,14 +165,17 @@ import { teamsService } from './teamsService'
 const teams = ref([])
 const sections = ref([])
 const students = ref([])
+const instructors = ref([])
 const loading = ref(false)
 const savingTeam = ref(false)
 const message = ref('')
 const error = ref('')
 const selectedTeamId = ref(null)
 const selectedAssignmentTeam = ref(null)
+const selectedInstructorAssignmentTeam = ref(null)
 const sectionFilter = ref('')
 const assignmentStudentId = ref('')
+const assignmentInstructorId = ref('')
 const teamForm = reactive({ sectionId: '', name: '' })
 const studentForm = reactive({ displayName: '', email: '' })
 const availableStudents = computed(() => {
@@ -145,6 +187,15 @@ const availableStudents = computed(() => {
   return students.value.filter((student) => !assignedIds.has(student.id))
 })
 
+const availableInstructors = computed(() => {
+  if (!selectedInstructorAssignmentTeam.value) {
+    return instructors.value
+  }
+
+  const assignedIds = new Set(selectedInstructorAssignmentTeam.value.instructorUserIds || [])
+  return instructors.value.filter((instructor) => !assignedIds.has(instructor.id))
+})
+
 function sectionName(sectionId) {
   return sections.value.find((section) => section.id === sectionId)?.name || `Section ${sectionId}`
 }
@@ -152,6 +203,11 @@ function sectionName(sectionId) {
 function studentLabel(studentId) {
   const student = students.value.find((item) => item.id === studentId)
   return student ? student.displayName : `Student ${studentId}`
+}
+
+function instructorLabel(instructorId) {
+  const instructor = instructors.value.find((item) => item.id === instructorId)
+  return instructor ? instructor.displayName : `Instructor ${instructorId}`
 }
 
 function resetTeamForm() {
@@ -175,6 +231,10 @@ async function loadTeams() {
     if (selectedAssignmentTeam.value) {
       selectedAssignmentTeam.value = teams.value.find((team) => team.id === selectedAssignmentTeam.value.id) || null
     }
+    if (selectedInstructorAssignmentTeam.value) {
+      selectedInstructorAssignmentTeam.value =
+        teams.value.find((team) => team.id === selectedInstructorAssignmentTeam.value.id) || null
+    }
   } catch (err) {
     error.value = err.message
   } finally {
@@ -192,8 +252,13 @@ async function loadStudents() {
   students.value = result.data
 }
 
+async function loadInstructors() {
+  const result = await usersService.findAll('INSTRUCTOR')
+  instructors.value = result.data
+}
+
 async function loadAll() {
-  await Promise.all([loadSections(), loadStudents()])
+  await Promise.all([loadSections(), loadStudents(), loadInstructors()])
   await loadTeams()
 }
 
@@ -269,6 +334,38 @@ async function removeStudent(studentId) {
     const result = await teamsService.removeStudent(selectedAssignmentTeam.value.id, studentId)
     selectedAssignmentTeam.value = result.data
     message.value = 'Student removed.'
+    await loadTeams()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+async function assignInstructor() {
+  error.value = ''
+  message.value = ''
+  if (!selectedInstructorAssignmentTeam.value || !assignmentInstructorId.value) {
+    return
+  }
+  try {
+    const result = await teamsService.assignInstructors(selectedInstructorAssignmentTeam.value.id, [
+      Number(assignmentInstructorId.value)
+    ])
+    selectedInstructorAssignmentTeam.value = result.data
+    assignmentInstructorId.value = ''
+    message.value = 'Instructor assigned.'
+    await loadTeams()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+async function removeInstructor(instructorId) {
+  error.value = ''
+  message.value = ''
+  try {
+    const result = await teamsService.removeInstructor(selectedInstructorAssignmentTeam.value.id, instructorId)
+    selectedInstructorAssignmentTeam.value = result.data
+    message.value = 'Instructor removed.'
     await loadTeams()
   } catch (err) {
     error.value = err.message

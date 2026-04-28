@@ -9,4 +9,5 @@ public record TeamResponse(
     String name,
     Instant createdAt,
     Instant updatedAt,
-    List<Long> studentUserIds) {}
+    List<Long> studentUserIds,
+    List<Long> instructorUserIds) {}
