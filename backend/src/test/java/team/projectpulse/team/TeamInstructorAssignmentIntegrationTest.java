@@ -31,7 +31,7 @@ class TeamInstructorAssignmentIntegrationTest {
     Long rubricId = createRubric("UC-19 Rubric " + suffix);
     Long sectionId = createSection(rubricId, "UC-19 Section " + suffix);
     Long teamId = createTeam(sectionId, "UC-19 Team " + suffix);
-    Long instructorId = setupInstructor("uc19.instructor@example.edu", "UC-19 Instructor");
+    Long instructorId = setupInstructor(uniqueEmail("uc19.instructor"), "UC-19 Instructor " + suffix);
 
     assignInstructorToSection(sectionId, instructorId);
 
@@ -60,7 +60,7 @@ class TeamInstructorAssignmentIntegrationTest {
     Long rubricId = createRubric("UC-19 Rubric Reject " + suffix);
     Long sectionId = createSection(rubricId, "UC-19 Section Reject " + suffix);
     Long teamId = createTeam(sectionId, "UC-19 Team Reject " + suffix);
-    Long instructorId = setupInstructor("uc19.unassigned.instructor@example.edu", "UC-19 Unassigned Instructor");
+    Long instructorId = setupInstructor(uniqueEmail("uc19.unassigned.instructor"), "UC-19 Unassigned Instructor " + suffix);
 
     mvc.perform(post("/api/teams/" + teamId + "/instructors")
             .contentType(MediaType.APPLICATION_JSON)
@@ -89,6 +89,11 @@ class TeamInstructorAssignmentIntegrationTest {
 
   private String uniqueSuffix() {
     return UUID.randomUUID().toString();
+  }
+
+  private String uniqueEmail(String prefix) {
+    String token = UUID.randomUUID().toString().replace("-", "");
+    return "%s.%s@example.edu".formatted(prefix, token);
   }
 
   private Long createRubric(String name) throws Exception {
