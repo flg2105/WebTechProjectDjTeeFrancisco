@@ -55,12 +55,12 @@ Notes:
 
 ## Frontend (Vue 3) — Missing / Incomplete Screens
 
-### WAR student workflow (missing)
-- [ ] UC-27: Student manages activities in a Weekly Activity Report (WAR) (`requirements/3_Use_Cases.md`)
+### WAR student workflow (complete)
+- [x] UC-27: Student manages activities in a Weekly Activity Report (WAR) (`requirements/3_Use_Cases.md`)
 
 Notes:
-- `frontend/src/features/war/WarView.vue` is currently a placeholder.
-- Implement add/edit/delete activities using `frontend/src/features/war/warService.js` and shared patterns in `frontend/src/shared/services/apiClient.js`.
+- Implemented WAR add/edit/delete flow in `frontend/src/features/war/WarView.vue`.
+- WAR API wiring lives in `frontend/src/features/war/warService.js` via `frontend/src/shared/services/apiClient.js`.
 
 ### Instructor reporting views (missing)
 - [ ] Add UI screens/routes for instructor reporting flows (UC-31..UC-34) (`requirements/3_Use_Cases.md`)
@@ -89,4 +89,3 @@ Auth is explicitly deferred for the prototype per `docs/decisions/0001-auth-dire
 - [ ] Core service logic has automated tests (at least 1 per new endpoint) (`docs/testing-strategy.md`)
 - [ ] CI is green: backend tests + frontend build (`.github/workflows/ci.yml`)
 - [ ] No use-case-critical placeholders remain in the UI (notably WAR and reporting pages)
-
