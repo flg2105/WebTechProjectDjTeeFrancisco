@@ -7,5 +7,7 @@ import team.projectpulse.rubric.domain.Rubric;
 public interface RubricRepository extends JpaRepository<Rubric, Long> {
   boolean existsByNameIgnoreCase(String name);
 
+  Optional<Rubric> findByNameIgnoreCase(String name);
+
   Optional<Rubric> findById(Long id);
 }

@@ -92,6 +92,7 @@ See `/docs/team-workflow.md`
 
 - Architecture: `/docs/architecture.md`
 - Development Plan: `/docs/development-plan.md`
+- Final Steps Checklist: `/docs/final-steps-checklist.md`
 - Coding Standards: `/docs/coding-standards.md`
 - Decisions (ADRs): `/docs/decisions/`
 - Deployment: `/docs/deployment.md`

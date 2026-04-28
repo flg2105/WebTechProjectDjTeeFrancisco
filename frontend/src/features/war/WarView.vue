@@ -1,5 +1,4 @@
 <template>
-<<<<<<< feature/uc-27-war-activities
   <section class="phase-page">
     <div class="page-heading">
       <div>
@@ -220,7 +219,6 @@
       </section>
     </div>
   </section>
-=======
   <PlaceholderPage
     eyebrow="UC-27"
     title="Weekly Activity Reports"
@@ -232,7 +230,6 @@
       'Connect the polished view to warService without changing the UX patterns'
     ]"
   />
->>>>>>> main
 </template>
 
 <script setup>
