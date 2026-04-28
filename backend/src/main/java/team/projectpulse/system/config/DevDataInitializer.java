@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import team.projectpulse.peereval.domain.PeerEvaluationEntry;
@@ -55,6 +56,7 @@ public class DevDataInitializer implements ApplicationRunner {
   private final RubricRepository rubricRepository;
   private final WarEntryRepository warEntryRepository;
   private final PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository;
+  private final PasswordEncoder passwordEncoder;
 
   public DevDataInitializer(
       @Value("${projectpulse.dev-seed.enabled:false}") boolean enabled,
@@ -66,7 +68,8 @@ public class DevDataInitializer implements ApplicationRunner {
       TeamMembershipRepository teamMembershipRepository,
       RubricRepository rubricRepository,
       WarEntryRepository warEntryRepository,
-      PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository) {
+      PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository,
+      PasswordEncoder passwordEncoder) {
     this.enabled = enabled;
     this.userRepository = userRepository;
     this.invitationRepository = invitationRepository;
@@ -77,6 +80,7 @@ public class DevDataInitializer implements ApplicationRunner {
     this.rubricRepository = rubricRepository;
     this.warEntryRepository = warEntryRepository;
     this.peerEvaluationSubmissionRepository = peerEvaluationSubmissionRepository;
+    this.passwordEncoder = passwordEncoder;
   }
 
   @Override
@@ -213,10 +217,11 @@ public class DevDataInitializer implements ApplicationRunner {
     return week;
   }
 
-  private static ProjectUser user(String email, String displayName, UserRole role, UserStatus status) {
+  private ProjectUser user(String email, String displayName, UserRole role, UserStatus status) {
     ProjectUser user = new ProjectUser();
     user.setEmail(email);
     user.setDisplayName(displayName);
+    user.setPasswordHash(passwordEncoder.encode("projectpulse123"));
     user.setRole(role);
     user.setStatus(status);
     return user;

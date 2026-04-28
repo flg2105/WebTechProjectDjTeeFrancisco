@@ -199,7 +199,8 @@ class AdminSetupFlowIntegrationTest {
             .content("""
                 {
                   "email": "phase2.student@example.edu",
-                  "displayName": "Phase Two Student"
+                  "displayName": "Phase Two Student",
+                  "password": "projectpulse123"
                 }
                 """))
         .andExpect(status().isOk())
