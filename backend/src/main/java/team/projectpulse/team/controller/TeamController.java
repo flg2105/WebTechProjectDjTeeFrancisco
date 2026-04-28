@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.projectpulse.system.Result;
+import team.projectpulse.team.dto.AssignInstructorsRequest;
 import team.projectpulse.team.dto.AssignStudentRequest;
 import team.projectpulse.team.dto.TeamRequest;
 import team.projectpulse.team.dto.TeamResponse;
@@ -68,5 +69,17 @@ public class TeamController {
   @PreAuthorize("hasRole('ADMIN')")
   public Result<TeamResponse> removeStudent(@PathVariable Long id, @PathVariable Long studentUserId) {
     return Result.ok("Remove Student Success", teamService.removeStudent(id, studentUserId));
+  }
+
+  @PostMapping("/{id}/instructors")
+  public Result<TeamResponse> assignInstructors(
+      @PathVariable Long id,
+      @Valid @RequestBody AssignInstructorsRequest request) {
+    return Result.ok("Assign Instructors Success", teamService.assignInstructors(id, request));
+  }
+
+  @DeleteMapping("/{id}/instructors/{instructorUserId}")
+  public Result<TeamResponse> removeInstructor(@PathVariable Long id, @PathVariable Long instructorUserId) {
+    return Result.ok("Remove Instructor Success", teamService.removeInstructor(id, instructorUserId));
   }
 }

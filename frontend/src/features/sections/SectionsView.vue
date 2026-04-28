@@ -125,18 +125,58 @@
           </label>
           <button class="text-button" type="submit">Invite Instructors</button>
         </form>
+
+        <form class="invite-form" @submit.prevent="assignInstructorToSection">
+          <h3>Assign Instructors to Section</h3>
+          <label>
+            Section
+            <select v-model.number="instructorAssignment.sectionId" required>
+              <option disabled value="">Select a section</option>
+              <option v-for="section in sections" :key="section.id" :value="section.id">
+                {{ section.name }}
+              </option>
+            </select>
+          </label>
+          <label>
+            Instructor
+            <select v-model.number="instructorAssignment.instructorUserId" required>
+              <option disabled value="">Select an instructor</option>
+              <option v-for="instructor in availableInstructorsForSection" :key="instructor.id" :value="instructor.id">
+                {{ instructor.displayName }} ({{ instructor.email }})
+              </option>
+            </select>
+          </label>
+          <p v-if="availableInstructorsForSection.length === 0" class="empty-state mb-0">
+            Every available instructor is already assigned to this section.
+          </p>
+          <button class="text-button" type="submit">Assign Instructor</button>
+
+          <div v-if="selectedSectionForInstructorAssignment" class="assigned-list">
+            <button
+              v-for="instructorId in selectedSectionForInstructorAssignment.instructorUserIds || []"
+              :key="instructorId"
+              class="student-chip"
+              type="button"
+              title="Remove instructor from section"
+              @click="removeInstructorFromSection(instructorId)"
+            >
+              {{ instructorLabel(instructorId) }} x
+            </button>
+          </div>
+        </form>
       </section>
     </div>
   </section>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { rubricsService } from '../rubrics/rubricsService'
 import { usersService } from '../users/usersService'
 import { sectionsService } from './sectionsService'
 
 const sections = ref([])
+const instructors = ref([])
 const rubrics = ref([])
 const loading = ref(false)
 const savingSection = ref(false)
@@ -155,6 +195,23 @@ const sectionForm = reactive({
 })
 const studentInvite = reactive({ sectionId: '', emails: '' })
 const instructorInvite = reactive({ emails: '' })
+const instructorAssignment = reactive({ sectionId: '', instructorUserId: '' })
+
+const selectedSectionForInstructorAssignment = computed(() => {
+  if (!instructorAssignment.sectionId) {
+    return null
+  }
+  return sections.value.find((section) => section.id === Number(instructorAssignment.sectionId)) || null
+})
+
+const availableInstructorsForSection = computed(() => {
+  const selected = selectedSectionForInstructorAssignment.value
+  if (!selected) {
+    return instructors.value
+  }
+  const assigned = new Set(selected.instructorUserIds || [])
+  return instructors.value.filter((instructor) => !assigned.has(instructor.id))
+})
 
 function parseEmails(value) {
   return value.split(/[\n,;]+/).map((email) => email.trim()).filter(Boolean)
@@ -215,6 +272,11 @@ function addWeek() {
   weekForm.value.push({ weekStartDate: '', active: true })
 }
 
+function instructorLabel(instructorId) {
+  const instructor = instructors.value.find((item) => item.id === instructorId)
+  return instructor ? instructor.displayName : `Instructor ${instructorId}`
+}
+
 async function loadSections() {
   loading.value = true
   error.value = ''
@@ -234,8 +296,13 @@ async function loadRubrics() {
   rubrics.value = result.data
 }
 
+async function loadInstructors() {
+  const result = await usersService.findAll('INSTRUCTOR')
+  instructors.value = result.data
+}
+
 async function loadAll() {
-  await Promise.all([loadSections(), loadRubrics()])
+  await Promise.all([loadSections(), loadRubrics(), loadInstructors()])
 }
 
 async function saveSection() {
@@ -345,6 +412,40 @@ async function inviteInstructors() {
   }
 }
 
+async function assignInstructorToSection() {
+  error.value = ''
+  message.value = ''
+  const sectionId = Number(instructorAssignment.sectionId)
+  const instructorUserId = Number(instructorAssignment.instructorUserId)
+  if (!sectionId || !instructorUserId) {
+    return
+  }
+  try {
+    await sectionsService.assignInstructors(sectionId, [instructorUserId])
+    instructorAssignment.instructorUserId = ''
+    message.value = 'Instructor assigned to section.'
+    await loadSections()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
+async function removeInstructorFromSection(instructorUserId) {
+  error.value = ''
+  message.value = ''
+  const sectionId = Number(instructorAssignment.sectionId)
+  if (!sectionId) {
+    return
+  }
+  try {
+    await sectionsService.removeInstructor(sectionId, instructorUserId)
+    message.value = 'Instructor removed from section.'
+    await loadSections()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
 onMounted(loadAll)
 </script>
 
@@ -419,6 +520,33 @@ onMounted(loadAll)
 label {
   display: grid;
   gap: 0.45rem;
+}
+
+.assigned-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.mb-0 {
+  margin-bottom: 0;
+}
+
+.student-chip {
+  background: linear-gradient(180deg, rgba(245, 248, 255, 0.96), rgba(233, 239, 255, 0.96));
+  border: 1px solid rgba(177, 193, 229, 0.82);
+  border-radius: 999px;
+  color: var(--text-strong);
+  cursor: pointer;
+  font: inherit;
+  padding: 0.45rem 0.8rem;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.student-chip:hover {
+  border-color: rgba(94, 122, 255, 0.26);
+  box-shadow: 0 10px 24px rgba(94, 122, 255, 0.16);
+  transform: translateY(-1px);
 }
 
 .search-row input,

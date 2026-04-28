@@ -9,5 +9,8 @@ export const teamsService = {
   update: (teamId, team) => apiClient.put(`${teamsBasePath}/${teamId}`, team),
   remove: (teamId) => apiClient.del(`${teamsBasePath}/${teamId}`),
   assignStudent: (teamId, studentUserId) => apiClient.post(`${teamsBasePath}/${teamId}/students`, { studentUserId }),
-  removeStudent: (teamId, studentUserId) => apiClient.del(`${teamsBasePath}/${teamId}/students/${studentUserId}`)
+  removeStudent: (teamId, studentUserId) => apiClient.del(`${teamsBasePath}/${teamId}/students/${studentUserId}`),
+  assignInstructors: (teamId, instructorUserIds) =>
+    apiClient.post(`${teamsBasePath}/${teamId}/instructors`, { instructorUserIds }),
+  removeInstructor: (teamId, instructorUserId) => apiClient.del(`${teamsBasePath}/${teamId}/instructors/${instructorUserId}`)
 }

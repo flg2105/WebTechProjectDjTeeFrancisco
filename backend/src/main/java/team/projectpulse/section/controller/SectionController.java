@@ -3,6 +3,7 @@ package team.projectpulse.section.controller;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.projectpulse.section.dto.ActiveWeekRequest;
+import team.projectpulse.section.dto.AssignSectionInstructorsRequest;
 import team.projectpulse.section.dto.SectionRequest;
 import team.projectpulse.section.dto.SectionResponse;
 import team.projectpulse.section.service.SectionService;
@@ -56,5 +58,19 @@ public class SectionController {
       @PathVariable Long id,
       @Valid @RequestBody List<@Valid ActiveWeekRequest> requests) {
     return Result.ok("Update Active Weeks Success", sectionService.replaceActiveWeeks(id, requests));
+  }
+
+  @PostMapping("/{id}/instructors")
+  @PreAuthorize("hasRole('ADMIN')")
+  public Result<SectionResponse> assignInstructors(
+      @PathVariable Long id,
+      @Valid @RequestBody AssignSectionInstructorsRequest request) {
+    return Result.ok("Assign Section Instructors Success", sectionService.assignInstructors(id, request));
+  }
+
+  @DeleteMapping("/{id}/instructors/{instructorUserId}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public Result<SectionResponse> removeInstructor(@PathVariable Long id, @PathVariable Long instructorUserId) {
+    return Result.ok("Remove Section Instructor Success", sectionService.removeInstructor(id, instructorUserId));
   }
 }
