@@ -97,36 +97,49 @@ public class DevDataInitializer implements ApplicationRunner {
   }
 
   private void reset() {
+    // Use entity deletes (not bulk deletes) for aggregate roots that rely on JPA cascade/orphanRemoval.
+    // Bulk deletes (deleteAllInBatch) bypass cascade and can violate FK constraints.
     peerEvaluationSubmissionRepository.deleteAll();
+    peerEvaluationSubmissionRepository.flush();
+
     warEntryRepository.deleteAll();
-    teamMembershipRepository.deleteAll();
-    teamRepository.deleteAll();
-    activeWeekRepository.deleteAll();
-    sectionRepository.deleteAll();
-    invitationRepository.deleteAll();
-    userRepository.deleteAll();
+    warEntryRepository.flush();
+
+    teamMembershipRepository.deleteAllInBatch();
+    teamRepository.deleteAllInBatch();
+    activeWeekRepository.deleteAllInBatch();
+    sectionRepository.deleteAllInBatch();
+    invitationRepository.deleteAllInBatch();
+    userRepository.deleteAllInBatch();
     rubricRepository.deleteAll();
+    rubricRepository.flush();
   }
 
   private SeedSnapshot seed() {
-    Rubric rubric = new Rubric();
-    rubric.setName("Dev Seed Rubric");
+    Rubric rubric =
+        rubricRepository
+            .findByNameIgnoreCase("Dev Seed Rubric")
+            .orElseGet(
+                () -> {
+                  Rubric newRubric = new Rubric();
+                  newRubric.setName("Dev Seed Rubric");
 
-    RubricCriterion quality = new RubricCriterion();
-    quality.setName("Quality of work");
-    quality.setDescription("How do you rate the quality of this teammate's work?");
-    quality.setMaxScore(new BigDecimal("10.00"));
-    quality.setPosition(0);
-    rubric.addCriterion(quality);
+                  RubricCriterion quality = new RubricCriterion();
+                  quality.setName("Quality of work");
+                  quality.setDescription("How do you rate the quality of this teammate's work?");
+                  quality.setMaxScore(new BigDecimal("10.00"));
+                  quality.setPosition(0);
+                  newRubric.addCriterion(quality);
 
-    RubricCriterion productivity = new RubricCriterion();
-    productivity.setName("Productivity");
-    productivity.setDescription("How productive is this teammate?");
-    productivity.setMaxScore(new BigDecimal("10.00"));
-    productivity.setPosition(1);
-    rubric.addCriterion(productivity);
+                  RubricCriterion productivity = new RubricCriterion();
+                  productivity.setName("Productivity");
+                  productivity.setDescription("How productive is this teammate?");
+                  productivity.setMaxScore(new BigDecimal("10.00"));
+                  productivity.setPosition(1);
+                  newRubric.addCriterion(productivity);
 
-    rubric = rubricRepository.save(rubric);
+                  return rubricRepository.save(newRubric);
+                });
 
     LocalDate currentMonday = LocalDate.now().with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
     LocalDate previousMonday = currentMonday.minusWeeks(1);
@@ -294,4 +307,3 @@ public class DevDataInitializer implements ApplicationRunner {
       List<String> userEmails,
       List<LocalDate> activeWeekStartDates) {}
 }
-
