@@ -17,6 +17,7 @@ import java.util.Objects;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import team.projectpulse.auth.service.CurrentUserSecurity;
 import team.projectpulse.peereval.domain.PeerEvaluationEntry;
 import team.projectpulse.peereval.domain.PeerEvaluationScore;
 import team.projectpulse.peereval.domain.PeerEvaluationSubmission;
@@ -64,6 +65,7 @@ public class PeerEvaluationService {
   private final ActiveWeekRepository activeWeekRepository;
   private final RubricRepository rubricRepository;
   private final UserRepository userRepository;
+  private final CurrentUserSecurity currentUserSecurity;
   private final Clock clock = Clock.systemDefaultZone();
 
   public PeerEvaluationService(
@@ -73,7 +75,8 @@ public class PeerEvaluationService {
       SectionRepository sectionRepository,
       ActiveWeekRepository activeWeekRepository,
       RubricRepository rubricRepository,
-      UserRepository userRepository) {
+      UserRepository userRepository,
+      CurrentUserSecurity currentUserSecurity) {
     this.submissionRepository = submissionRepository;
     this.teamMembershipRepository = teamMembershipRepository;
     this.teamRepository = teamRepository;
@@ -81,9 +84,11 @@ public class PeerEvaluationService {
     this.activeWeekRepository = activeWeekRepository;
     this.rubricRepository = rubricRepository;
     this.userRepository = userRepository;
+    this.currentUserSecurity = currentUserSecurity;
   }
 
   public PeerEvaluationFormResponse findCurrent(Long studentUserId) {
+    currentUserSecurity.requireCurrentUser(studentUserId);
     StudentContext context = loadStudentContext(studentUserId);
     LocalDate targetWeek = resolveCurrentSubmissionWeek(context.section().getId());
     List<RubricCriterion> criteria = loadRubricCriteria(context.section().getRubricId());
@@ -101,6 +106,7 @@ public class PeerEvaluationService {
 
   @Transactional
   public PeerEvaluationSubmissionResponse submit(SubmitPeerEvaluationRequest request) {
+    currentUserSecurity.requireCurrentUser(request.evaluatorStudentUserId());
     StudentContext context = loadStudentContext(request.evaluatorStudentUserId());
     LocalDate expectedWeek = resolveCurrentSubmissionWeek(context.section().getId());
     if (!expectedWeek.equals(request.weekStartDate())) {
@@ -148,6 +154,7 @@ public class PeerEvaluationService {
   }
 
   public PeerEvaluationReportResponse findOwnReport(Long studentUserId, LocalDate weekStartDate) {
+    currentUserSecurity.requireCurrentUser(studentUserId);
     StudentContext context = loadStudentContext(studentUserId);
     LocalDate targetWeek = weekStartDate == null
         ? resolveCurrentSubmissionWeek(context.section().getId())

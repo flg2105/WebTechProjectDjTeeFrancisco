@@ -1,0 +1,110 @@
+package team.projectpulse.auth;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static team.projectpulse.system.StatusCode.FORBIDDEN;
+import static team.projectpulse.system.StatusCode.SUCCESS;
+import static team.projectpulse.system.StatusCode.UNAUTHORIZED;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class SecurityAuthorizationIntegrationTest {
+
+  @Autowired
+  private MockMvc mvc;
+
+  @Test
+  void should_ReturnUnauthorized_When_RequestHasNoAuth() throws Exception {
+    mvc.perform(get("/api/sections"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(UNAUTHORIZED));
+  }
+
+  @Test
+  void should_ReturnForbidden_When_StudentCreatesRubric() throws Exception {
+    mvc.perform(post("/api/rubrics")
+            .with(student("student.authz@example.edu"))
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "name": "Blocked Rubric",
+                  "criteria": [
+                    {
+                      "name": "Quality of work",
+                      "description": "Rate quality of work.",
+                      "maxScore": 10
+                    }
+                  ]
+                }
+                """))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(FORBIDDEN));
+  }
+
+  @Test
+  void should_ReturnForbidden_When_StudentViewsAnotherStudentsWar() throws Exception {
+    Long studentOneId = setupStudent("student.one.authz@example.edu", "Student One");
+    Long studentTwoId = setupStudent("student.two.authz@example.edu", "Student Two");
+
+    mvc.perform(get("/api/wars")
+            .with(student("student.one.authz@example.edu"))
+            .param("studentUserId", String.valueOf(studentTwoId))
+            .param("activeWeekId", "1"))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(FORBIDDEN));
+  }
+
+  @Test
+  void should_AllowInstructorToViewStudents() throws Exception {
+    mvc.perform(get("/api/students")
+            .with(instructor())
+            .param("q", "nobody"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
+  }
+
+  private Long setupStudent(String email, String displayName) throws Exception {
+    MvcResult result = mvc.perform(post("/api/users/student-setup")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "email": "%s",
+                  "displayName": "%s",
+                  "password": "projectpulse123"
+                }
+                """.formatted(email, displayName)))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    String body = result.getResponse().getContentAsString();
+    String marker = "\"id\":";
+    int start = body.indexOf(marker) + marker.length();
+    int end = body.indexOf(",", start);
+    return Long.valueOf(body.substring(start, end));
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor instructor() {
+    return SecurityMockMvcRequestPostProcessors.user("instructor@test.local").roles("INSTRUCTOR");
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor student(String email) {
+    return SecurityMockMvcRequestPostProcessors.user(email).roles("STUDENT");
+  }
+}

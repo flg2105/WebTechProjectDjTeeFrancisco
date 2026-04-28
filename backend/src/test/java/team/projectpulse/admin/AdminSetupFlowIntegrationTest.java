@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -36,6 +37,7 @@ class AdminSetupFlowIntegrationTest {
     Long teamId = createTeam(sectionId);
 
     mvc.perform(post("/api/teams/" + teamId + "/students")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"studentUserId\":" + studentId + "}"))
         .andExpect(status().isOk())
@@ -50,6 +52,7 @@ class AdminSetupFlowIntegrationTest {
     Long sectionId = createSectionWithName(rubricId, "Invalid Week Section");
 
     mvc.perform(put("/api/sections/" + sectionId + "/active-weeks")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("[{\"weekStartDate\":\"2026-09-01\",\"active\":true}]"))
         .andExpect(status().isBadRequest())
@@ -63,6 +66,7 @@ class AdminSetupFlowIntegrationTest {
     Long sectionId = createSectionWithName(rubricId, "Invite Students Section");
 
     mvc.perform(post("/api/invitations/students")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -83,6 +87,7 @@ class AdminSetupFlowIntegrationTest {
   @Test
   void should_RejectStudentInvite_When_SectionIdMissing() throws Exception {
     mvc.perform(post("/api/invitations/students")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -97,6 +102,7 @@ class AdminSetupFlowIntegrationTest {
   @Test
   void should_RejectStudentInvite_When_SectionNotFound() throws Exception {
     mvc.perform(post("/api/invitations/students")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -112,6 +118,7 @@ class AdminSetupFlowIntegrationTest {
   @Test
   void should_InviteInstructors_AndRecordInvitedUsers() throws Exception {
     mvc.perform(post("/api/invitations/instructors")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -133,6 +140,7 @@ class AdminSetupFlowIntegrationTest {
 
   private Long createRubricWithName(String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -160,6 +168,7 @@ class AdminSetupFlowIntegrationTest {
 
   private Long createSectionWithName(Long rubricId, String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/sections")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -180,6 +189,7 @@ class AdminSetupFlowIntegrationTest {
 
   private void createActiveWeeks(Long sectionId) throws Exception {
     mvc.perform(put("/api/sections/" + sectionId + "/active-weeks")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 [
@@ -214,6 +224,7 @@ class AdminSetupFlowIntegrationTest {
 
   private Long createTeam(Long sectionId) throws Exception {
     MvcResult result = mvc.perform(post("/api/teams")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -235,5 +246,9 @@ class AdminSetupFlowIntegrationTest {
     int start = body.indexOf(marker) + marker.length();
     int end = body.indexOf(",", start);
     return Long.valueOf(body.substring(start, end));
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
+    return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
   }
 }

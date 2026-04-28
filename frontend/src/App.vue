@@ -1,6 +1,6 @@
 <template>
   <div class="app-shell">
-    <TopNav />
+    <TopNav v-if="$route.name !== 'login'" />
     <main class="app-content">
       <RouterView v-slot="{ Component, route }">
         <Transition mode="out-in" name="page-fade">

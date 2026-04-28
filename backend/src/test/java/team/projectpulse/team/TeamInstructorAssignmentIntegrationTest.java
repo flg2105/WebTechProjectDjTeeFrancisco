@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -36,6 +37,7 @@ class TeamInstructorAssignmentIntegrationTest {
     assignInstructorToSection(sectionId, instructorId);
 
     mvc.perform(post("/api/teams/" + teamId + "/instructors")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -47,7 +49,8 @@ class TeamInstructorAssignmentIntegrationTest {
         .andExpect(jsonPath("$.code").value(SUCCESS))
         .andExpect(jsonPath("$.data.instructorUserIds[0]").value(instructorId));
 
-    mvc.perform(delete("/api/teams/" + teamId + "/instructors/" + instructorId))
+    mvc.perform(delete("/api/teams/" + teamId + "/instructors/" + instructorId)
+            .with(admin()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
@@ -63,6 +66,7 @@ class TeamInstructorAssignmentIntegrationTest {
     Long instructorId = setupInstructor(uniqueEmail("uc19.unassigned.instructor"), "UC-19 Unassigned Instructor " + suffix);
 
     mvc.perform(post("/api/teams/" + teamId + "/instructors")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -76,6 +80,7 @@ class TeamInstructorAssignmentIntegrationTest {
 
   private void assignInstructorToSection(Long sectionId, Long instructorUserId) throws Exception {
     mvc.perform(post("/api/sections/" + sectionId + "/instructors")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -98,6 +103,7 @@ class TeamInstructorAssignmentIntegrationTest {
 
   private Long createRubric(String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -121,6 +127,7 @@ class TeamInstructorAssignmentIntegrationTest {
 
   private Long createSection(Long rubricId, String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/sections")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -141,6 +148,7 @@ class TeamInstructorAssignmentIntegrationTest {
 
   private Long createTeam(Long sectionId, String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/teams")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -181,5 +189,9 @@ class TeamInstructorAssignmentIntegrationTest {
     int start = body.indexOf(marker) + marker.length();
     int end = body.indexOf(",", start);
     return Long.valueOf(body.substring(start, end));
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
+    return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
   }
 }

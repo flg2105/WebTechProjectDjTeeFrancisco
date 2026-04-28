@@ -152,6 +152,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { authSession } from '../../shared/services/authSession'
 import { sectionsService } from '../sections/sectionsService'
 import { usersService } from '../users/usersService'
 import { warService } from './warService'
@@ -218,7 +219,7 @@ async function loadContext() {
   try {
     const [sectionsResult, studentsResult] = await Promise.all([
       sectionsService.findAll(),
-      usersService.findAll('STUDENT')
+      loadStudentsForRole()
     ])
     sections.value = sectionsResult.data || []
     students.value = studentsResult.data || []
@@ -237,6 +238,22 @@ async function loadContext() {
   } finally {
     isLoadingContext.value = false
   }
+}
+
+async function loadStudentsForRole() {
+  if (authSession.currentUser?.role === 'STUDENT') {
+    return {
+      data: [
+        {
+          id: authSession.currentUser.userId,
+          displayName: authSession.currentUser.displayName,
+          email: authSession.currentUser.email
+        }
+      ]
+    }
+  }
+
+  return usersService.findStudents()
 }
 
 function ensureWeekSelection() {

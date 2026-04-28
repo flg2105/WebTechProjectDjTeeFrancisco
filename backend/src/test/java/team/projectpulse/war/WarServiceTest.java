@@ -15,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import team.projectpulse.auth.service.CurrentUserSecurity;
 import team.projectpulse.section.domain.ActiveWeek;
 import team.projectpulse.section.repository.ActiveWeekRepository;
 import team.projectpulse.system.ApiException;
@@ -46,6 +47,8 @@ class WarServiceTest {
   private TeamMembershipRepository teamMembershipRepository;
   @Mock
   private UserRepository userRepository;
+  @Mock
+  private CurrentUserSecurity currentUserSecurity;
 
   @InjectMocks
   private WarService warService;
@@ -60,6 +63,7 @@ class WarServiceTest {
     Team team = team(40L, 30L, "Pulse Team");
 
     when(userRepository.findById(studentUserId)).thenReturn(Optional.of(student));
+    org.mockito.Mockito.doNothing().when(currentUserSecurity).requireCurrentUser(studentUserId);
     when(activeWeekRepository.findById(activeWeekId)).thenReturn(Optional.of(activeWeek));
     when(teamMembershipRepository.findByStudentUserIdOrderByTeamIdAsc(studentUserId)).thenReturn(List.of(membership));
     when(teamRepository.findAllById(List.of(40L))).thenReturn(List.of(team));
@@ -88,6 +92,7 @@ class WarServiceTest {
     ActiveWeek activeWeek = activeWeek(activeWeekId, 30L, LocalDate.now().plusWeeks(1), true);
 
     when(userRepository.findById(studentUserId)).thenReturn(Optional.of(student(studentUserId)));
+    org.mockito.Mockito.doNothing().when(currentUserSecurity).requireCurrentUser(studentUserId);
     when(activeWeekRepository.findById(activeWeekId)).thenReturn(Optional.of(activeWeek));
 
     assertThatThrownBy(() -> warService.addActivity(request(studentUserId, activeWeekId)))
@@ -104,6 +109,7 @@ class WarServiceTest {
     ActiveWeek activeWeek = activeWeek(activeWeekId, 30L, LocalDate.now().minusWeeks(1), false);
 
     when(userRepository.findById(studentUserId)).thenReturn(Optional.of(student(studentUserId)));
+    org.mockito.Mockito.doNothing().when(currentUserSecurity).requireCurrentUser(studentUserId);
     when(activeWeekRepository.findById(activeWeekId)).thenReturn(Optional.of(activeWeek));
 
     assertThatThrownBy(() -> warService.findWar(studentUserId, activeWeekId))

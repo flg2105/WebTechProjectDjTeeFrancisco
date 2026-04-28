@@ -2,6 +2,7 @@ package team.projectpulse.user.controller;
 
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,11 +32,13 @@ public class UserController {
   }
 
   @GetMapping("/api/users")
+  @PreAuthorize("hasRole('ADMIN')")
   public Result<List<UserResponse>> findAll(@RequestParam(required = false) UserRole role) {
     return Result.ok("Find Users Success", userService.findAll(role));
   }
 
   @PutMapping("/api/users/{id}")
+  @PreAuthorize("@currentUserSecurity.canEditAccount(#id)")
   public Result<UserResponse> editAccount(
       @PathVariable Long id,
       @Valid @RequestBody EditAccountRequest request) {
@@ -43,11 +46,13 @@ public class UserController {
   }
 
   @PostMapping("/api/invitations/students")
+  @PreAuthorize("hasRole('ADMIN')")
   public Result<InvitationResponse> inviteStudents(@Valid @RequestBody InvitationRequest request) {
     return Result.ok("Invite Students Success", userService.inviteStudents(request));
   }
 
   @PostMapping("/api/invitations/instructors")
+  @PreAuthorize("hasRole('ADMIN')")
   public Result<InvitationResponse> inviteInstructors(@Valid @RequestBody InvitationRequest request) {
     return Result.ok("Invite Instructors Success", userService.inviteInstructors(request));
   }
@@ -63,23 +68,27 @@ public class UserController {
   }
 
   @GetMapping("/api/students")
+  @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
   public Result<List<StudentSearchResultResponse>> findStudents(
       @RequestParam(required = false) String q) {
     return Result.ok("Find Students Success", userService.findStudents(q));
   }
 
   @GetMapping("/api/students/{id}")
+  @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
   public Result<StudentDetailsResponse> viewStudent(@PathVariable Long id) {
     return Result.ok("View Student Success", userService.viewStudent(id));
   }
 
   @GetMapping("/api/instructors")
+  @PreAuthorize("hasRole('ADMIN')")
   public Result<List<InstructorSearchResultResponse>> findInstructors(
       @RequestParam(required = false) String q) {
     return Result.ok("Find Instructors Success", userService.findInstructors(q));
   }
 
   @DeleteMapping("/api/students/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
   public Result<Void> deleteStudent(@PathVariable Long id) {
     boolean deleted = userService.deleteStudent(id);
     String message = deleted ? "Delete Student Success" : "Deactivate Student Success";

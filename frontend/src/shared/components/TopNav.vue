@@ -10,7 +10,7 @@
 
     <nav class="sidebar-nav" aria-label="Primary">
       <RouterLink
-        v-for="item in navItems"
+        v-for="item in visibleNavItems"
         :key="item.to"
         :class="['sidebar-link', { active: $route.path === item.to }]"
         :to="item.to"
@@ -22,18 +22,41 @@
         </span>
       </RouterLink>
     </nav>
+
+    <div class="brand-lockup session-panel">
+      <div v-if="authSession.currentUser">
+        <strong>{{ authSession.currentUser.displayName }}</strong>
+        <p class="brand-copy">{{ authSession.currentUser.role }}</p>
+      </div>
+      <button class="ghost-button" type="button" @click="signOut">Sign Out</button>
+    </div>
   </aside>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
+import { authSession } from '../services/authSession'
+
+const router = useRouter()
 
 const navItems = [
-  { to: '/', label: 'Home', caption: 'Project overview', icon: 'H' },
-  { to: '/sections', label: 'Sections', caption: 'Schedules and invites', icon: 'S' },
-  { to: '/teams', label: 'Teams', caption: 'Assignments and rosters', icon: 'T' },
-  { to: '/rubrics', label: 'Rubrics', caption: 'Scoring frameworks', icon: 'R' },
-  { to: '/war', label: 'WAR', caption: 'Weekly activity reports', icon: 'W' },
-  { to: '/peer-eval', label: 'Peer Eval', caption: 'Submissions and reports', icon: 'P' }
+  { to: '/', label: 'Home', caption: 'Project overview', icon: 'H', roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT'] },
+  { to: '/sections', label: 'Sections', caption: 'Schedules and invites', icon: 'S', roles: ['ADMIN'] },
+  { to: '/teams', label: 'Teams', caption: 'Assignments and rosters', icon: 'T', roles: ['ADMIN', 'INSTRUCTOR'] },
+  { to: '/rubrics', label: 'Rubrics', caption: 'Scoring frameworks', icon: 'R', roles: ['ADMIN'] },
+  { to: '/war', label: 'WAR', caption: 'Weekly activity reports', icon: 'W', roles: ['STUDENT', 'INSTRUCTOR'] },
+  { to: '/peer-eval', label: 'Peer Eval', caption: 'Submissions and reports', icon: 'P', roles: ['STUDENT', 'INSTRUCTOR'] }
 ]
+
+const visibleNavItems = computed(() => {
+  const role = authSession.currentUser?.role
+  return navItems.filter((item) => !role || item.roles.includes(role))
+})
+
+async function signOut() {
+  authSession.logout()
+  await router.replace('/login')
+}
 </script>

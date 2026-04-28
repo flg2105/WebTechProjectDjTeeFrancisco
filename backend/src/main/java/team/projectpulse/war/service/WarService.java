@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import team.projectpulse.auth.service.CurrentUserSecurity;
 import team.projectpulse.section.domain.ActiveWeek;
 import team.projectpulse.section.repository.ActiveWeekRepository;
 import team.projectpulse.system.ApiException;
@@ -32,21 +33,25 @@ public class WarService {
   private final TeamRepository teamRepository;
   private final TeamMembershipRepository teamMembershipRepository;
   private final UserRepository userRepository;
+  private final CurrentUserSecurity currentUserSecurity;
 
   public WarService(
       WarEntryRepository warEntryRepository,
       ActiveWeekRepository activeWeekRepository,
       TeamRepository teamRepository,
       TeamMembershipRepository teamMembershipRepository,
-      UserRepository userRepository) {
+      UserRepository userRepository,
+      CurrentUserSecurity currentUserSecurity) {
     this.warEntryRepository = warEntryRepository;
     this.activeWeekRepository = activeWeekRepository;
     this.teamRepository = teamRepository;
     this.teamMembershipRepository = teamMembershipRepository;
     this.userRepository = userRepository;
+    this.currentUserSecurity = currentUserSecurity;
   }
 
   public WarEntryResponse findWar(Long studentUserId, Long activeWeekId) {
+    currentUserSecurity.requireCurrentUser(studentUserId);
     WarContext context = resolveContext(studentUserId, activeWeekId);
     return warEntryRepository.findByActiveWeekIdAndStudentUserId(activeWeekId, studentUserId)
         .map(entry -> toResponse(entry, context.activeWeek()))
@@ -98,6 +103,7 @@ public class WarService {
 
   @Transactional
   public WarEntryResponse addActivity(WarActivityRequest request) {
+    currentUserSecurity.requireCurrentUser(request.studentUserId());
     WarContext context = resolveContext(request.studentUserId(), request.activeWeekId());
     WarEntry entry = warEntryRepository.findByActiveWeekIdAndStudentUserId(request.activeWeekId(), request.studentUserId())
         .orElseGet(() -> createEntry(request.studentUserId(), context));
@@ -110,6 +116,7 @@ public class WarService {
 
   @Transactional
   public WarEntryResponse updateActivity(Long activityId, WarActivityRequest request) {
+    currentUserSecurity.requireCurrentUser(request.studentUserId());
     WarContext context = resolveContext(request.studentUserId(), request.activeWeekId());
     WarEntry entry = getExistingEntry(request.studentUserId(), request.activeWeekId());
     WarActivity activity = getActivity(entry, activityId);
@@ -119,6 +126,7 @@ public class WarService {
 
   @Transactional
   public WarEntryResponse deleteActivity(Long activityId, Long studentUserId, Long activeWeekId) {
+    currentUserSecurity.requireCurrentUser(studentUserId);
     WarContext context = resolveContext(studentUserId, activeWeekId);
     WarEntry entry = getExistingEntry(studentUserId, activeWeekId);
     WarActivity activity = getActivity(entry, activityId);

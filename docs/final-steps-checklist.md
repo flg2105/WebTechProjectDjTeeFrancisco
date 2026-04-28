@@ -76,10 +76,10 @@ Notes:
 
 Auth is explicitly deferred for the prototype per `docs/decisions/0001-auth-direction.md`, but is required for a complete system.
 
-- [ ] Implement login using HTTP Basic auth, then JWT for subsequent requests (`docs/api-guidelines.md`)
-- [ ] Enforce role-based authorization (Admin/Instructor/Student) per use case preconditions (`requirements/3_Use_Cases.md`)
-- [ ] Add backend tests covering unauthenticated + unauthorized access paths (`docs/testing-strategy.md`)
-- [ ] Update frontend API client to attach JWT (`frontend/src/shared/services/apiClient.js`)
+- [x] Implement login using HTTP Basic auth, then JWT for subsequent requests (`docs/api-guidelines.md`)
+- [x] Enforce role-based authorization (Admin/Instructor/Student) per use case preconditions (`requirements/3_Use_Cases.md`)
+- [x] Add backend tests covering unauthenticated + unauthorized access paths (`docs/testing-strategy.md`)
+- [x] Update frontend API client to attach JWT (`frontend/src/shared/services/apiClient.js`)
 
 ---
 

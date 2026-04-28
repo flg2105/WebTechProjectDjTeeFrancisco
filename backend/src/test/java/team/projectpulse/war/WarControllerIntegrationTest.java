@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -40,6 +41,7 @@ class WarControllerIntegrationTest {
     assignStudent(teamId, studentId);
 
     mvc.perform(get("/api/wars")
+            .with(student("war.student@example.edu"))
             .param("studentUserId", String.valueOf(studentId))
             .param("activeWeekId", String.valueOf(activeWeekId)))
         .andExpect(status().isOk())
@@ -48,6 +50,7 @@ class WarControllerIntegrationTest {
         .andExpect(jsonPath("$.data.activities.length()").value(0));
 
     MvcResult addResult = mvc.perform(post("/api/wars/activities")
+            .with(student("war.student@example.edu"))
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -71,6 +74,7 @@ class WarControllerIntegrationTest {
     Long activityId = readId(addResult, "\"activities\":[{\"id\":");
 
     mvc.perform(put("/api/wars/activities/" + activityId)
+            .with(student("war.student@example.edu"))
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -91,6 +95,7 @@ class WarControllerIntegrationTest {
         .andExpect(jsonPath("$.data.activities[0].status").value("DONE"));
 
     mvc.perform(delete("/api/wars/activities/" + activityId)
+            .with(student("war.student@example.edu"))
             .param("studentUserId", String.valueOf(studentId))
             .param("activeWeekId", String.valueOf(activeWeekId)))
         .andExpect(status().isOk())
@@ -110,6 +115,7 @@ class WarControllerIntegrationTest {
     assignStudent(teamId, studentId);
 
     mvc.perform(post("/api/wars/activities")
+            .with(student("future.war.student@example.edu"))
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -141,10 +147,11 @@ class WarControllerIntegrationTest {
     Long teamId = createTeam(sectionId, "WAR Report Team");
     assignStudent(teamId, studentId);
 
-    addActivity(studentId, weekOneId, "DEVELOPMENT", "Implement report endpoint");
-    addActivity(studentId, weekTwoId, "TESTING", "Test report endpoint");
+    addActivity("war.report.student@example.edu", studentId, weekOneId, "DEVELOPMENT", "Implement report endpoint");
+    addActivity("war.report.student@example.edu", studentId, weekTwoId, "TESTING", "Test report endpoint");
 
     mvc.perform(get("/api/wars/student-report")
+            .with(instructor())
             .param("studentUserId", String.valueOf(studentId))
             .param("startActiveWeekId", String.valueOf(weekOneId))
             .param("endActiveWeekId", String.valueOf(weekTwoId)))
@@ -172,6 +179,7 @@ class WarControllerIntegrationTest {
     assignStudent(teamId, studentId);
 
     mvc.perform(get("/api/wars/student-report")
+            .with(instructor())
             .param("studentUserId", String.valueOf(studentId))
             .param("startActiveWeekId", String.valueOf(weekOneId))
             .param("endActiveWeekId", String.valueOf(weekTwoId)))
@@ -183,6 +191,7 @@ class WarControllerIntegrationTest {
 
   private Long createRubric(String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -204,6 +213,7 @@ class WarControllerIntegrationTest {
 
   private Long createSection(String name, Long rubricId, LocalDate startDate, LocalDate endDate) throws Exception {
     MvcResult result = mvc.perform(post("/api/sections")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -222,6 +232,7 @@ class WarControllerIntegrationTest {
 
   private Long createActiveWeek(Long sectionId, LocalDate weekStartDate, boolean active) throws Exception {
     MvcResult result = mvc.perform(put("/api/sections/" + sectionId + "/active-weeks")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 [
@@ -236,6 +247,7 @@ class WarControllerIntegrationTest {
 
   private Long[] replaceActiveWeeks(Long sectionId, LocalDate weekOneStartDate, LocalDate weekTwoStartDate) throws Exception {
     MvcResult result = mvc.perform(put("/api/sections/" + sectionId + "/active-weeks")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 [
@@ -270,6 +282,7 @@ class WarControllerIntegrationTest {
 
   private Long createTeam(Long sectionId, String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/teams")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -285,6 +298,7 @@ class WarControllerIntegrationTest {
 
   private void assignStudent(Long teamId, Long studentId) throws Exception {
     mvc.perform(post("/api/teams/" + teamId + "/students")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -294,8 +308,9 @@ class WarControllerIntegrationTest {
         .andExpect(status().isOk());
   }
 
-  private void addActivity(Long studentId, Long activeWeekId, String category, String activity) throws Exception {
+  private void addActivity(String email, Long studentId, Long activeWeekId, String category, String activity) throws Exception {
     mvc.perform(post("/api/wars/activities")
+            .with(student(email))
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -348,5 +363,17 @@ class WarControllerIntegrationTest {
       end = substring.indexOf("}", start);
     }
     return Long.valueOf(substring.substring(start, end));
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
+    return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor instructor() {
+    return SecurityMockMvcRequestPostProcessors.user("instructor@test.local").roles("INSTRUCTOR");
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor student(String email) {
+    return SecurityMockMvcRequestPostProcessors.user(email).roles("STUDENT");
   }
 }
