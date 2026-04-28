@@ -159,7 +159,8 @@ class UserPhaseThreeIntegrationTest {
             .content("""
                 {
                   "email": "%s",
-                  "displayName": "%s"
+                  "displayName": "%s",
+                  "password": "projectpulse123"
                 }
                 """.formatted(email, displayName)))
         .andExpect(status().isOk())
@@ -177,7 +178,8 @@ class UserPhaseThreeIntegrationTest {
             .content("""
                 {
                   "email": "%s",
-                  "displayName": "%s"
+                  "displayName": "%s",
+                  "password": "projectpulse123"
                 }
                 """.formatted(email, displayName)))
         .andExpect(status().isOk())

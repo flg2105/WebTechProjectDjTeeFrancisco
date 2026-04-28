@@ -24,6 +24,9 @@ public class ProjectUser {
   @Column(name = "display_name", nullable = false)
   private String displayName;
 
+  @Column(name = "password_hash")
+  private String passwordHash;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   private UserRole role;
@@ -56,6 +59,14 @@ public class ProjectUser {
 
   public void setDisplayName(String displayName) {
     this.displayName = displayName;
+  }
+
+  public String getPasswordHash() {
+    return passwordHash;
+  }
+
+  public void setPasswordHash(String passwordHash) {
+    this.passwordHash = passwordHash;
   }
 
   public UserRole getRole() {

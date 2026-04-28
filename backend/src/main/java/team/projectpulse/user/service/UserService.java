@@ -2,6 +2,7 @@ package team.projectpulse.user.service;
 
 import java.util.List;
 import java.util.Objects;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -31,16 +32,19 @@ public class UserService {
   private final InvitationRepository invitationRepository;
   private final SectionRepository sectionRepository;
   private final TeamMembershipRepository teamMembershipRepository;
+  private final PasswordEncoder passwordEncoder;
 
   public UserService(
       UserRepository userRepository,
       InvitationRepository invitationRepository,
       SectionRepository sectionRepository,
-      TeamMembershipRepository teamMembershipRepository) {
+      TeamMembershipRepository teamMembershipRepository,
+      PasswordEncoder passwordEncoder) {
     this.userRepository = userRepository;
     this.invitationRepository = invitationRepository;
     this.sectionRepository = sectionRepository;
     this.teamMembershipRepository = teamMembershipRepository;
+    this.passwordEncoder = passwordEncoder;
   }
 
   public List<UserResponse> findAll(UserRole role) {
@@ -178,6 +182,7 @@ public class UserService {
     ProjectUser user = userRepository.findByEmailIgnoreCase(email).orElseGet(ProjectUser::new);
     user.setEmail(email);
     user.setDisplayName(request.displayName().trim());
+    user.setPasswordHash(passwordEncoder.encode(request.password()));
     user.setRole(role);
     user.setStatus(UserStatus.ACTIVE);
     user.touch();
