@@ -108,6 +108,7 @@ Always:
 3. Check architecture rules
 4. Follow coding standards
 5. Ensure consistency with existing code
+6. Before pushing, update `/docs/final-steps-checklist.md` by checking off any completed items
 6. Before starting a new phase, confirm you are on an up-to-date `main` (e.g., `git checkout main` and `git pull --ff-only`) before creating a new branch
 
 ---
