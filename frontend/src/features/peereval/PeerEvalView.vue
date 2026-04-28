@@ -171,6 +171,7 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { authSession } from '../../shared/services/authSession'
 import { usersService } from '../users/usersService'
 import { peerEvalService } from './peerEvalService'
 
@@ -202,7 +203,7 @@ async function loadStudents() {
   error.value = ''
 
   try {
-    const result = await usersService.findAll('STUDENT')
+    const result = await loadStudentsForRole()
     students.value = result.data || []
     if (!selectedStudentId.value && students.value.length > 0) {
       selectedStudentId.value = students.value[0].id
@@ -212,6 +213,22 @@ async function loadStudents() {
   } finally {
     isLoadingStudents.value = false
   }
+}
+
+async function loadStudentsForRole() {
+  if (authSession.currentUser?.role === 'STUDENT') {
+    return {
+      data: [
+        {
+          id: authSession.currentUser.userId,
+          displayName: authSession.currentUser.displayName,
+          email: authSession.currentUser.email
+        }
+      ]
+    }
+  }
+
+  return usersService.findStudents()
 }
 
 async function loadAll() {

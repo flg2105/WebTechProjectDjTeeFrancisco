@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -38,6 +39,7 @@ class PeerEvaluationControllerIntegrationTest {
     PeerEvalFixture fixture = createPeerEvalFixture();
 
     mvc.perform(get("/api/peer-evaluations")
+            .with(student(fixture.studentOneEmail()))
             .param("studentUserId", fixture.studentOneId().toString()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
@@ -54,6 +56,7 @@ class PeerEvaluationControllerIntegrationTest {
     PeerEvalFixture fixture = createPeerEvalFixture();
 
     submitEvaluation(
+        fixture.studentTwoEmail(),
         fixture.studentTwoId(),
         fixture.previousWeekStart(),
         """
@@ -86,6 +89,7 @@ class PeerEvaluationControllerIntegrationTest {
             fixture.criterionTwoId()));
 
     submitEvaluation(
+        fixture.studentThreeEmail(),
         fixture.studentThreeId(),
         fixture.previousWeekStart(),
         """
@@ -118,6 +122,7 @@ class PeerEvaluationControllerIntegrationTest {
             fixture.criterionTwoId()));
 
     mvc.perform(get("/api/peer-evaluations/me/report")
+            .with(student(fixture.studentOneEmail()))
             .param("studentUserId", fixture.studentOneId().toString())
             .param("weekStartDate", fixture.previousWeekStart().toString()))
         .andExpect(status().isOk())
@@ -168,9 +173,10 @@ class PeerEvaluationControllerIntegrationTest {
         fixture.criterionOneId(),
         fixture.criterionTwoId());
 
-    submitEvaluation(fixture.studentOneId(), fixture.previousWeekStart(), evaluations);
+    submitEvaluation(fixture.studentOneEmail(), fixture.studentOneId(), fixture.previousWeekStart(), evaluations);
 
     mvc.perform(post("/api/peer-evaluations")
+            .with(student(fixture.studentOneEmail()))
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -192,6 +198,7 @@ class PeerEvaluationControllerIntegrationTest {
     PeerEvalFixture fixture = createPeerEvalFixture();
 
     submitEvaluation(
+        fixture.studentTwoEmail(),
         fixture.studentTwoId(),
         fixture.previousWeekStart(),
         """
@@ -224,6 +231,7 @@ class PeerEvaluationControllerIntegrationTest {
             fixture.criterionTwoId()));
 
     submitEvaluation(
+        fixture.studentThreeEmail(),
         fixture.studentThreeId(),
         fixture.previousWeekStart(),
         """
@@ -256,6 +264,7 @@ class PeerEvaluationControllerIntegrationTest {
             fixture.criterionTwoId()));
 
     mvc.perform(get("/api/peer-evaluations/section-report")
+            .with(instructor())
             .param("sectionId", fixture.sectionId().toString())
             .param("weekStartDate", fixture.previousWeekStart().toString()))
         .andExpect(status().isOk())
@@ -285,6 +294,7 @@ class PeerEvaluationControllerIntegrationTest {
     PeerEvalFixture fixture = createPeerEvalFixture();
 
     submitEvaluation(
+        fixture.studentTwoEmail(),
         fixture.studentTwoId(),
         fixture.previousWeekStart(),
         """
@@ -317,6 +327,7 @@ class PeerEvaluationControllerIntegrationTest {
             fixture.criterionTwoId()));
 
     submitEvaluation(
+        fixture.studentThreeEmail(),
         fixture.studentThreeId(),
         fixture.previousWeekStart(),
         """
@@ -349,6 +360,7 @@ class PeerEvaluationControllerIntegrationTest {
             fixture.criterionTwoId()));
 
     mvc.perform(get("/api/peer-evaluations/student-report")
+            .with(instructor())
             .param("studentUserId", fixture.studentOneId().toString())
             .param("startActiveWeekId", fixture.previousActiveWeekId().toString())
             .param("endActiveWeekId", fixture.currentActiveWeekId().toString()))
@@ -374,6 +386,7 @@ class PeerEvaluationControllerIntegrationTest {
     PeerEvalFixture fixture = createPeerEvalFixture();
 
     mvc.perform(get("/api/peer-evaluations/student-report")
+            .with(instructor())
             .param("studentUserId", fixture.studentOneId().toString())
             .param("startActiveWeekId", fixture.previousActiveWeekId().toString())
             .param("endActiveWeekId", fixture.currentActiveWeekId().toString()))
@@ -383,9 +396,10 @@ class PeerEvaluationControllerIntegrationTest {
         .andExpect(jsonPath("$.message").value("No peer evaluation report data available for the selected period"));
   }
 
-  private void submitEvaluation(Long evaluatorStudentUserId, LocalDate weekStartDate, String evaluationsJson)
+  private void submitEvaluation(String email, Long evaluatorStudentUserId, LocalDate weekStartDate, String evaluationsJson)
       throws Exception {
     mvc.perform(post("/api/peer-evaluations")
+            .with(student(email))
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -412,9 +426,13 @@ class PeerEvaluationControllerIntegrationTest {
     Long previousActiveWeekId = findActiveWeekId(sectionId, previousWeekStart);
     Long currentActiveWeekId = findActiveWeekId(sectionId, currentWeekStart);
 
-    Long studentOneId = setupStudent("phase3.student.one.%d@example.edu".formatted(unique), "Phase Three Student One");
-    Long studentTwoId = setupStudent("phase3.student.two.%d@example.edu".formatted(unique), "Phase Three Student Two");
-    Long studentThreeId = setupStudent("phase3.student.three.%d@example.edu".formatted(unique), "Phase Three Student Three");
+    String studentOneEmail = "phase3.student.one.%d@example.edu".formatted(unique);
+    String studentTwoEmail = "phase3.student.two.%d@example.edu".formatted(unique);
+    String studentThreeEmail = "phase3.student.three.%d@example.edu".formatted(unique);
+
+    Long studentOneId = setupStudent(studentOneEmail, "Phase Three Student One");
+    Long studentTwoId = setupStudent(studentTwoEmail, "Phase Three Student Two");
+    Long studentThreeId = setupStudent(studentThreeEmail, "Phase Three Student Three");
 
     Long teamId = createTeam(sectionId);
     assignStudent(teamId, studentOneId);
@@ -428,8 +446,11 @@ class PeerEvaluationControllerIntegrationTest {
         sectionId,
         teamId,
         studentOneId,
+        studentOneEmail,
         studentTwoId,
+        studentTwoEmail,
         studentThreeId,
+        studentThreeEmail,
         previousActiveWeekId,
         currentActiveWeekId,
         previousWeekStart,
@@ -438,6 +459,7 @@ class PeerEvaluationControllerIntegrationTest {
 
   private Long createRubric() throws Exception {
     MvcResult result = mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -462,7 +484,7 @@ class PeerEvaluationControllerIntegrationTest {
   }
 
   private Long findCriterionId(Long rubricId, int index) throws Exception {
-    MvcResult result = mvc.perform(get("/api/rubrics/" + rubricId))
+    MvcResult result = mvc.perform(get("/api/rubrics/" + rubricId).with(admin()))
         .andExpect(status().isOk())
         .andReturn();
 
@@ -483,6 +505,7 @@ class PeerEvaluationControllerIntegrationTest {
 
   private Long createSection(Long rubricId) throws Exception {
     MvcResult result = mvc.perform(post("/api/sections")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -500,6 +523,7 @@ class PeerEvaluationControllerIntegrationTest {
 
   private void createActiveWeeks(Long sectionId, LocalDate previousWeekStart, LocalDate currentWeekStart) throws Exception {
     mvc.perform(put("/api/sections/" + sectionId + "/active-weeks")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 [
@@ -511,7 +535,7 @@ class PeerEvaluationControllerIntegrationTest {
   }
 
   private Long findActiveWeekId(Long sectionId, LocalDate weekStartDate) throws Exception {
-    MvcResult result = mvc.perform(get("/api/sections/" + sectionId))
+    MvcResult result = mvc.perform(get("/api/sections/" + sectionId).with(admin()))
         .andExpect(status().isOk())
         .andReturn();
 
@@ -541,6 +565,7 @@ class PeerEvaluationControllerIntegrationTest {
 
   private Long createTeam(Long sectionId) throws Exception {
     MvcResult result = mvc.perform(post("/api/teams")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -555,6 +580,7 @@ class PeerEvaluationControllerIntegrationTest {
 
   private void assignStudent(Long teamId, Long studentId) throws Exception {
     mvc.perform(post("/api/teams/" + teamId + "/students")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -579,11 +605,26 @@ class PeerEvaluationControllerIntegrationTest {
       Long sectionId,
       Long teamId,
       Long studentOneId,
+      String studentOneEmail,
       Long studentTwoId,
+      String studentTwoEmail,
       Long studentThreeId,
+      String studentThreeEmail,
       Long previousActiveWeekId,
       Long currentActiveWeekId,
       LocalDate previousWeekStart,
       LocalDate currentWeekStart) {
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
+    return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor instructor() {
+    return SecurityMockMvcRequestPostProcessors.user("instructor@test.local").roles("INSTRUCTOR");
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor student(String email) {
+    return SecurityMockMvcRequestPostProcessors.user(email).roles("STUDENT");
   }
 }

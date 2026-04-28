@@ -1,3 +1,5 @@
+import { authSession } from './authSession'
+
 const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 class ApiError extends Error {
@@ -14,12 +16,16 @@ async function request(path, options) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(authSession.token ? { Authorization: `Bearer ${authSession.token}` } : {}),
       ...(options?.headers || {})
     }
   })
 
   const body = await res.json().catch(() => null)
   if (!res.ok || body?.flag === false) {
+    if (res.status === 401) {
+      authSession.logout()
+    }
     const message = body?.message || `Request failed (${res.status})`
     throw new ApiError(message, body, res.status)
   }

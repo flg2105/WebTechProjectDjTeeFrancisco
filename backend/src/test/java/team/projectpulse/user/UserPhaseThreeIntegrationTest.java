@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -45,6 +46,7 @@ class UserPhaseThreeIntegrationTest {
     Long studentId = setupStudent("phase3.editme@example.edu", "Edit Me");
 
     mvc.perform(put("/api/users/" + studentId)
+            .with(student("phase3.editme@example.edu"))
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -63,6 +65,7 @@ class UserPhaseThreeIntegrationTest {
   @Test
   void should_ReturnNotFound_When_EditAccount_UserMissing() throws Exception {
     mvc.perform(put("/api/users/999999")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -81,13 +84,13 @@ class UserPhaseThreeIntegrationTest {
     setupStudent("phase3.findstudents.bob@example.edu", "FindStudents Bob");
     setupInstructor("phase3.findstudents.instructor@example.edu", "FindStudents Instructor");
 
-    mvc.perform(get("/api/students").param("q", "findstudents"))
+    mvc.perform(get("/api/students").with(instructor()).param("q", "findstudents"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
         .andExpect(jsonPath("$.data.length()").value(2));
 
-    mvc.perform(get("/api/students").param("q", "phase3.findstudents.bob"))
+    mvc.perform(get("/api/students").with(instructor()).param("q", "phase3.findstudents.bob"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
@@ -99,7 +102,7 @@ class UserPhaseThreeIntegrationTest {
   void should_ViewStudent_WithStubbedWarAndPeerEvalFields() throws Exception {
     Long studentId = setupStudent("phase3.viewme@example.edu", "View Me");
 
-    mvc.perform(get("/api/students/" + studentId))
+    mvc.perform(get("/api/students/" + studentId).with(instructor()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
@@ -113,7 +116,7 @@ class UserPhaseThreeIntegrationTest {
     setupStudent("phase3.instructorstub.student@example.edu", "Instructor Stub Student");
     setupInstructor("phase3.instructorstub.instructor@example.edu", "Instructor Stub Instructor");
 
-    mvc.perform(get("/api/instructors").param("q", "phase3.instructorstub"))
+    mvc.perform(get("/api/instructors").with(admin()).param("q", "phase3.instructorstub"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
@@ -138,13 +141,13 @@ class UserPhaseThreeIntegrationTest {
     invitation.setSectionId(null);
     invitationRepository.save(invitation);
 
-    mvc.perform(delete("/api/students/" + studentId))
+    mvc.perform(delete("/api/students/" + studentId).with(admin()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
         .andExpect(jsonPath("$.data").value(nullValue()));
 
-    mvc.perform(get("/api/students/" + studentId))
+    mvc.perform(get("/api/students/" + studentId).with(instructor()))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.flag").value(false))
         .andExpect(jsonPath("$.code").value(NOT_FOUND));
@@ -197,5 +200,17 @@ class UserPhaseThreeIntegrationTest {
     int start = body.indexOf(marker) + marker.length();
     int end = body.indexOf(",", start);
     return Long.valueOf(body.substring(start, end));
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
+    return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor instructor() {
+    return SecurityMockMvcRequestPostProcessors.user("instructor@test.local").roles("INSTRUCTOR");
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor student(String email) {
+    return SecurityMockMvcRequestPostProcessors.user(email).roles("STUDENT");
   }
 }

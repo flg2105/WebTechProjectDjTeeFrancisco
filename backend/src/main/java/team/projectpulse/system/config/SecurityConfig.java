@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,6 +31,7 @@ import team.projectpulse.system.Result;
 import team.projectpulse.system.StatusCode;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
   @Bean
   PasswordEncoder passwordEncoder() {
@@ -49,9 +51,14 @@ public class SecurityConfig {
         .formLogin(AbstractHttpConfigurer::disable)
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(authorize -> authorize
-            .requestMatchers("/api/health", "/error", "/api/auth/login").permitAll()
-            .requestMatchers("/api/auth/me").authenticated()
-            .anyRequest().permitAll())
+            .requestMatchers(
+                "/api/health",
+                "/error",
+                "/api/auth/login",
+                "/api/users/student-setup",
+                "/api/users/instructor-setup")
+            .permitAll()
+            .anyRequest().authenticated())
         .exceptionHandling(exceptionHandling -> exceptionHandling
             .authenticationEntryPoint(authenticationEntryPoint)
             .accessDeniedHandler(accessDeniedHandler))

@@ -2,6 +2,7 @@ package team.projectpulse.war.controller;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Positive;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -29,6 +30,7 @@ public class WarController {
   }
 
   @GetMapping
+  @PreAuthorize("hasRole('STUDENT')")
   public Result<WarEntryResponse> findWar(
       @RequestParam @Positive Long studentUserId,
       @RequestParam @Positive Long activeWeekId) {
@@ -36,6 +38,7 @@ public class WarController {
   }
 
   @GetMapping("/student-report")
+  @PreAuthorize("hasRole('INSTRUCTOR')")
   public Result<WarStudentReportResponse> findStudentReport(
       @RequestParam @Positive Long studentUserId,
       @RequestParam @Positive Long startActiveWeekId,
@@ -46,11 +49,13 @@ public class WarController {
   }
 
   @PostMapping("/activities")
+  @PreAuthorize("hasRole('STUDENT')")
   public Result<WarEntryResponse> addActivity(@Valid @RequestBody WarActivityRequest request) {
     return Result.ok("Add WAR Activity Success", warService.addActivity(request));
   }
 
   @PutMapping("/activities/{activityId}")
+  @PreAuthorize("hasRole('STUDENT')")
   public Result<WarEntryResponse> updateActivity(
       @PathVariable Long activityId,
       @Valid @RequestBody WarActivityRequest request) {
@@ -58,6 +63,7 @@ public class WarController {
   }
 
   @DeleteMapping("/activities/{activityId}")
+  @PreAuthorize("hasRole('STUDENT')")
   public Result<WarEntryResponse> deleteActivity(
       @PathVariable Long activityId,
       @RequestParam @Positive Long studentUserId,

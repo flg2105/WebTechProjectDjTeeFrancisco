@@ -2,6 +2,7 @@ package team.projectpulse.peereval.controller;
 
 import jakarta.validation.Valid;
 import java.time.LocalDate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,16 +28,19 @@ public class PeerEvaluationController {
   }
 
   @GetMapping
+  @PreAuthorize("hasRole('STUDENT')")
   public Result<PeerEvaluationFormResponse> findCurrent(@RequestParam Long studentUserId) {
     return Result.ok("Find Peer Evaluation Form Success", peerEvaluationService.findCurrent(studentUserId));
   }
 
   @PostMapping
+  @PreAuthorize("hasRole('STUDENT')")
   public Result<PeerEvaluationSubmissionResponse> submit(@Valid @RequestBody SubmitPeerEvaluationRequest request) {
     return Result.ok("Submit Peer Evaluation Success", peerEvaluationService.submit(request));
   }
 
   @GetMapping("/me/report")
+  @PreAuthorize("hasRole('STUDENT')")
   public Result<PeerEvaluationReportResponse> findOwnReport(
       @RequestParam Long studentUserId,
       @RequestParam(required = false) LocalDate weekStartDate) {
@@ -45,6 +49,7 @@ public class PeerEvaluationController {
   }
 
   @GetMapping("/section-report")
+  @PreAuthorize("hasRole('INSTRUCTOR')")
   public Result<PeerEvaluationSectionReportResponse> findSectionReport(
       @RequestParam Long sectionId,
       @RequestParam LocalDate weekStartDate) {
@@ -54,6 +59,7 @@ public class PeerEvaluationController {
   }
 
   @GetMapping("/student-report")
+  @PreAuthorize("hasRole('INSTRUCTOR')")
   public Result<PeerEvaluationStudentReportResponse> findStudentReport(
       @RequestParam Long studentUserId,
       @RequestParam Long startActiveWeekId,

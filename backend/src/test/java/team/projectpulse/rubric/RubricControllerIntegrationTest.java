@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import team.projectpulse.rubric.repository.RubricRepository;
@@ -35,6 +36,7 @@ class RubricControllerIntegrationTest {
   @Test
   void should_CreateRubric_When_RequestIsValid() throws Exception {
     mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content(validRubricJson("Peer Eval Rubric v1")))
         .andExpect(status().isOk())
@@ -52,11 +54,13 @@ class RubricControllerIntegrationTest {
   @Test
   void should_ReturnConflict_When_RubricNameAlreadyExists() throws Exception {
     mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content(validRubricJson("Peer Eval Rubric v1")))
         .andExpect(status().isOk());
 
     mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content(validRubricJson("peer eval rubric v1")))
         .andExpect(status().isConflict())
@@ -69,6 +73,7 @@ class RubricControllerIntegrationTest {
   @Test
   void should_ReturnInvalidArgument_When_CriterionMaxScoreIsNotPositive() throws Exception {
     mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
@@ -91,11 +96,12 @@ class RubricControllerIntegrationTest {
   @Test
   void should_FindAllRubrics_When_RubricsExist() throws Exception {
     mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content(validRubricJson("Peer Eval Rubric v1")))
         .andExpect(status().isOk());
 
-    mvc.perform(get("/api/rubrics"))
+    mvc.perform(get("/api/rubrics").with(admin()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
@@ -107,6 +113,7 @@ class RubricControllerIntegrationTest {
   @Test
   void should_FindRubricById_When_RubricExists() throws Exception {
     String response = mvc.perform(post("/api/rubrics")
+            .with(admin())
             .contentType(MediaType.APPLICATION_JSON)
             .content(validRubricJson("Peer Eval Rubric v1")))
         .andExpect(status().isOk())
@@ -116,7 +123,7 @@ class RubricControllerIntegrationTest {
 
     Number id = com.jayway.jsonpath.JsonPath.read(response, "$.data.id");
 
-    mvc.perform(get("/api/rubrics/{id}", id))
+    mvc.perform(get("/api/rubrics/{id}", id).with(admin()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(StatusCode.SUCCESS))
@@ -127,7 +134,7 @@ class RubricControllerIntegrationTest {
 
   @Test
   void should_ReturnNotFound_When_RubricDoesNotExist() throws Exception {
-    mvc.perform(get("/api/rubrics/{id}", 999L))
+    mvc.perform(get("/api/rubrics/{id}", 999L).with(admin()))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.flag").value(false))
         .andExpect(jsonPath("$.code").value(StatusCode.NOT_FOUND))
@@ -155,5 +162,9 @@ class RubricControllerIntegrationTest {
           ]
         }
         """.formatted(name);
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
+    return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
   }
 }
