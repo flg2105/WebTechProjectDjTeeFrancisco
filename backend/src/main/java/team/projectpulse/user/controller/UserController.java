@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.projectpulse.system.Result;
 import team.projectpulse.user.domain.UserRole;
+import team.projectpulse.user.dto.DeactivateInstructorRequest;
 import team.projectpulse.user.dto.EditAccountRequest;
+import team.projectpulse.user.dto.InstructorDetailsResponse;
 import team.projectpulse.user.dto.InstructorSearchResultResponse;
 import team.projectpulse.user.dto.InvitationRequest;
 import team.projectpulse.user.dto.InvitationResponse;
@@ -85,6 +87,26 @@ public class UserController {
   public Result<List<InstructorSearchResultResponse>> findInstructors(
       @RequestParam(required = false) String q) {
     return Result.ok("Find Instructors Success", userService.findInstructors(q));
+  }
+
+  @GetMapping("/api/instructors/{id}")
+  @PreAuthorize("hasRole('ADMIN')")
+  public Result<InstructorDetailsResponse> viewInstructor(@PathVariable Long id) {
+    return Result.ok("View Instructor Success", userService.viewInstructor(id));
+  }
+
+  @PostMapping("/api/instructors/{id}/deactivate")
+  @PreAuthorize("hasRole('ADMIN')")
+  public Result<UserResponse> deactivateInstructor(
+      @PathVariable Long id,
+      @Valid @RequestBody DeactivateInstructorRequest request) {
+    return Result.ok("Deactivate Instructor Success", userService.deactivateInstructor(id, request));
+  }
+
+  @PostMapping("/api/instructors/{id}/reactivate")
+  @PreAuthorize("hasRole('ADMIN')")
+  public Result<UserResponse> reactivateInstructor(@PathVariable Long id) {
+    return Result.ok("Reactivate Instructor Success", userService.reactivateInstructor(id));
   }
 
   @DeleteMapping("/api/students/{id}")
