@@ -133,17 +133,51 @@ class UserPhaseThreeIntegrationTest {
   }
 
   @Test
-  void should_FindInstructors_AsLookupStub() throws Exception {
-    setupStudent("phase3.instructorstub.student@example.edu", "Instructor Stub Student");
-    setupInstructor("phase3.instructorstub.instructor@example.edu", "Instructor Stub Instructor");
+  void should_FindInstructors_WithCriteriaAndAssociatedTeams() throws Exception {
+    setupStudent("phase3.instructorsearch.student@example.edu", "Instructor Search Student");
+    Long adaInstructorId = setupInstructor("phase3.instructorsearch.ada@example.edu", "Ada Lovelace");
+    Long alanInstructorId = setupInstructor("phase3.instructorsearch.alan@example.edu", "Alan Turing");
 
-    mvc.perform(get("/api/instructors").with(admin()).param("q", "phase3.instructorstub"))
+    mvc.perform(post("/api/invitations/instructors")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "emails": ["phase3.instructorsearch.invited@example.edu"]
+                }
+                """))
+        .andExpect(status().isOk());
+
+    createSupervisedTeam(adaInstructorId, "Capstone Search 2027", "Compiler Crew", "2027-2028");
+    createSupervisedTeam(alanInstructorId, "Capstone Search 2026", "Systems Squad", "2026-2027");
+
+    mvc.perform(get("/api/instructors").with(admin()).param("firstName", "Ada"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
         .andExpect(jsonPath("$.data.length()").value(1))
-        .andExpect(jsonPath("$.data[0].email").value("phase3.instructorstub.instructor@example.edu"))
+        .andExpect(jsonPath("$.data[0].email").value("phase3.instructorsearch.ada@example.edu"))
+        .andExpect(jsonPath("$.data[0].firstName").value("Ada"))
+        .andExpect(jsonPath("$.data[0].lastName").value("Lovelace"))
+        .andExpect(jsonPath("$.data[0].supervisedTeams.length()").value(1))
+        .andExpect(jsonPath("$.data[0].supervisedTeams[0].teamName").value("Compiler Crew"))
         .andExpect(jsonPath("$.data[0].status").value("ACTIVE"));
+
+    mvc.perform(get("/api/instructors").with(admin()).param("teamName", "Systems"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].email").value("phase3.instructorsearch.alan@example.edu"))
+        .andExpect(jsonPath("$.data[0].supervisedTeams[0].teamName").value("Systems Squad"));
+
+    mvc.perform(get("/api/instructors").with(admin()).param("status", "INVITED"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].email").value("phase3.instructorsearch.invited@example.edu"))
+        .andExpect(jsonPath("$.data[0].supervisedTeams.length()").value(0));
   }
 
   @Test
@@ -302,13 +336,17 @@ class UserPhaseThreeIntegrationTest {
   }
 
   private Long createSupervisedTeam(Long instructorUserId, String sectionName, String teamName) {
+    return createSupervisedTeam(instructorUserId, sectionName, teamName, "2026-2027");
+  }
+
+  private Long createSupervisedTeam(Long instructorUserId, String sectionName, String teamName, String academicYear) {
     Rubric rubric = new Rubric();
     rubric.setName("Instructor View Rubric " + instructorUserId);
     rubric = rubricRepository.save(rubric);
 
     Section section = new Section();
     section.setName(sectionName);
-    section.setAcademicYear("2026-2027");
+    section.setAcademicYear(academicYear);
     section.setStartDate(LocalDate.of(2026, 1, 12));
     section.setEndDate(LocalDate.of(2026, 5, 1));
     section.setRubricId(rubric.getId());

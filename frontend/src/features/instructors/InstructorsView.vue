@@ -18,34 +18,53 @@
           <h2>Find Instructors</h2>
         </div>
 
-        <form class="search-row" @submit.prevent="loadInstructors">
-          <input v-model.trim="searchQuery" placeholder="Search by name or email" />
-          <select v-model="statusFilter">
-            <option value="">All statuses</option>
-            <option value="ACTIVE">Active</option>
-            <option value="INACTIVE">Deactivated</option>
-            <option value="INVITED">Invited</option>
-          </select>
-          <button class="text-button" type="submit">Search</button>
+        <form class="search-form" @submit.prevent="loadInstructors">
+          <div class="search-grid">
+            <input v-model.trim="searchForm.firstName" placeholder="First name" />
+            <input v-model.trim="searchForm.lastName" placeholder="Last name" />
+            <input v-model.trim="searchForm.teamName" placeholder="Team name" />
+          </div>
+          <div class="search-row">
+            <select v-model="searchForm.status">
+              <option value="">All statuses</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Deactivated</option>
+              <option value="INVITED">Invited</option>
+            </select>
+            <button class="text-button" type="submit">Search</button>
+          </div>
         </form>
 
         <div v-if="isLoadingList" class="empty-state">Loading instructors...</div>
-        <div v-else-if="filteredInstructors.length === 0" class="empty-state">
+        <div v-else-if="instructors.length === 0" class="empty-state">
           No instructors match the current search.
         </div>
         <article
-          v-for="instructor in filteredInstructors"
+          v-for="instructor in instructors"
           v-else
           :key="instructor.id"
           :class="['list-item', { selected: selectedInstructorId === instructor.id }]"
         >
           <button class="list-select" type="button" @click="selectInstructor(instructor.id)">
-            <div>
-              <strong>{{ instructor.displayName }}</strong>
-              <p>{{ instructor.email }}</p>
-              <p class="helper">
-                {{ instructor.status === 'INACTIVE' ? 'Deactivated' : instructor.status }}
-              </p>
+            <div class="stack-gap-sm">
+              <div>
+                <strong>{{ displayInstructorName(instructor) }}</strong>
+                <p>{{ instructor.email }}</p>
+                <p class="helper">
+                  {{ instructor.status === 'INACTIVE' ? 'Deactivated' : instructor.status }}
+                </p>
+              </div>
+              <div>
+                <p class="detail-label">Teams</p>
+                <p v-if="instructor.supervisedTeams.length === 0" class="helper mb-0">
+                  No supervised teams yet.
+                </p>
+                <div v-else class="result-team-list">
+                  <span v-for="team in instructor.supervisedTeams" :key="`${instructor.id}-${team.teamId}`" class="team-pill">
+                    {{ team.teamName }}
+                  </span>
+                </div>
+              </div>
             </div>
             <span :class="['status-badge', instructor.status === 'ACTIVE' ? 'success' : 'neutral']">
               {{ instructor.status === 'INACTIVE' ? 'Deactivated' : instructor.status }}
@@ -150,27 +169,24 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { usersService } from '../users/usersService'
 
 const instructors = ref([])
 const selectedInstructor = ref(null)
 const selectedInstructorId = ref(null)
-const searchQuery = ref('')
-const statusFilter = ref('')
+const searchForm = reactive({
+  firstName: '',
+  lastName: '',
+  teamName: '',
+  status: ''
+})
 const deactivationReason = ref('')
 const isLoadingList = ref(false)
 const isLoadingDetails = ref(false)
 const isSavingStatus = ref(false)
 const message = ref('')
 const error = ref('')
-
-const filteredInstructors = computed(() => {
-  if (!statusFilter.value) {
-    return instructors.value
-  }
-  return instructors.value.filter((instructor) => instructor.status === statusFilter.value)
-})
 
 onMounted(loadAll)
 
@@ -185,7 +201,7 @@ async function loadInstructors() {
   isLoadingList.value = true
   error.value = ''
   try {
-    const result = await usersService.findInstructors(searchQuery.value)
+    const result = await usersService.findInstructors(searchForm)
     instructors.value = result.data || []
     if (selectedInstructorId.value && !instructors.value.some((item) => item.id === selectedInstructorId.value)) {
       selectedInstructorId.value = null
@@ -262,12 +278,21 @@ async function refreshSelectedInstructor() {
     await loadInstructorDetails(selectedInstructorId.value)
   }
 }
+
+function displayInstructorName(instructor) {
+  const first = instructor.firstName?.trim() || ''
+  const last = instructor.lastName?.trim() || ''
+  const fullName = `${first} ${last}`.trim()
+  return fullName || instructor.displayName
+}
 </script>
 
 <style scoped>
 .phase-page,
 .panel,
-.status-actions {
+.status-actions,
+.search-form,
+.stack-gap-sm {
   display: grid;
   gap: 1rem;
 }
@@ -290,6 +315,12 @@ async function refreshSelectedInstructor() {
 .empty-state,
 .detail-label {
   margin: 0;
+}
+
+.search-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .layout-grid {
@@ -332,6 +363,21 @@ async function refreshSelectedInstructor() {
   width: 100%;
 }
 
+.result-team-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.team-pill {
+  background: rgba(236, 242, 255, 0.94);
+  border: 1px solid rgba(176, 191, 225, 0.85);
+  border-radius: 999px;
+  color: var(--text-strong);
+  font-size: 0.88rem;
+  padding: 0.35rem 0.7rem;
+}
+
 .detail-grid {
   display: grid;
   gap: 0.9rem;
@@ -364,7 +410,8 @@ async function refreshSelectedInstructor() {
 
 @media (max-width: 900px) {
   .layout-grid,
-  .detail-grid {
+  .detail-grid,
+  .search-grid {
     grid-template-columns: 1fr;
   }
 }

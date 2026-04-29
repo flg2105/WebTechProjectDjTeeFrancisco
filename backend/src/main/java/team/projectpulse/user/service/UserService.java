@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -136,10 +137,30 @@ public class UserService {
     return toStudentDetails(user);
   }
 
-  public List<InstructorSearchResultResponse> findInstructors(String q) {
-    String query = normalizeQuery(q);
-    return userRepository.searchByRole(UserRole.INSTRUCTOR, query).stream()
-        .map(this::toInstructorSearchResult)
+  public List<InstructorSearchResultResponse> findInstructors(
+      String firstName,
+      String lastName,
+      String teamName,
+      UserStatus status) {
+    String normalizedFirstName = normalizeQuery(firstName);
+    String normalizedLastName = normalizeQuery(lastName);
+    String normalizedTeamName = normalizeQuery(teamName);
+
+    return userRepository.findByRoleOrderByDisplayNameAsc(UserRole.INSTRUCTOR).stream()
+        .map(this::toInstructorSearchCandidate)
+        .filter(candidate -> matchesInstructorSearch(
+            candidate,
+            normalizedFirstName,
+            normalizedLastName,
+            normalizedTeamName,
+            status))
+        .sorted(Comparator
+            .comparingInt(InstructorSearchCandidate::latestAcademicYearStart)
+            .reversed()
+            .thenComparing(candidate -> sortText(candidate.nameParts().lastName()))
+            .thenComparing(candidate -> sortText(candidate.nameParts().firstName()))
+            .thenComparing(candidate -> sortText(candidate.user().getDisplayName())))
+        .map(InstructorSearchCandidate::response)
         .toList();
   }
 
@@ -284,16 +305,6 @@ public class UserService {
         List.of());
   }
 
-  private InstructorSearchResultResponse toInstructorSearchResult(ProjectUser user) {
-    return new InstructorSearchResultResponse(
-        user.getId(),
-        user.getEmail(),
-        user.getDisplayName(),
-        user.getStatus(),
-        null,
-        null);
-  }
-
   private InstructorDetailsResponse toInstructorDetails(ProjectUser user) {
     NameParts nameParts = splitName(user.getDisplayName());
 
@@ -356,6 +367,105 @@ public class UserService {
     return value == null ? "" : value.trim().toLowerCase();
   }
 
+  private InstructorSearchCandidate toInstructorSearchCandidate(ProjectUser user) {
+    NameParts nameParts = splitName(user.getDisplayName());
+
+    List<Long> teamIds = teamInstructorAssignmentRepository.findByInstructorUserIdOrderByTeamIdAsc(user.getId())
+        .stream()
+        .map(TeamInstructorAssignment::getTeamId)
+        .distinct()
+        .toList();
+
+    Map<Long, Team> teamsById = teamRepository.findAllById(teamIds).stream()
+        .collect(Collectors.toMap(Team::getId, Function.identity()));
+    List<Long> sectionIds = teamsById.values().stream()
+        .map(Team::getSectionId)
+        .distinct()
+        .toList();
+    Map<Long, Section> sectionsById = sectionRepository.findAllById(sectionIds).stream()
+        .collect(Collectors.toMap(Section::getId, Function.identity()));
+
+    List<InstructorSupervisedTeamResponse> supervisedTeams = teamIds.stream()
+        .map(teamsById::get)
+        .filter(Objects::nonNull)
+        .map(team -> {
+          Section section = sectionsById.get(team.getSectionId());
+          return new InstructorSupervisedTeamResponse(
+              team.getSectionId(),
+              section != null ? section.getName() : "Section " + team.getSectionId(),
+              team.getId(),
+              team.getName());
+        })
+        .sorted(Comparator
+            .comparing((InstructorSupervisedTeamResponse response) -> sortSectionAcademicYear(response.sectionId(), sectionsById))
+            .reversed()
+            .thenComparing(response -> sortText(response.sectionName()))
+            .thenComparing(response -> sortText(response.teamName())))
+        .toList();
+
+    int latestAcademicYearStart = supervisedTeams.stream()
+        .map(InstructorSupervisedTeamResponse::sectionId)
+        .map(sectionsById::get)
+        .filter(Objects::nonNull)
+        .map(Section::getAcademicYear)
+        .mapToInt(this::academicYearStart)
+        .max()
+        .orElse(-1);
+
+    InstructorSearchResultResponse response = new InstructorSearchResultResponse(
+        user.getId(),
+        user.getEmail(),
+        user.getDisplayName(),
+        nameParts.firstName(),
+        nameParts.lastName(),
+        user.getStatus(),
+        supervisedTeams);
+
+    return new InstructorSearchCandidate(user, nameParts, supervisedTeams, latestAcademicYearStart, response);
+  }
+
+  private boolean matchesInstructorSearch(
+      InstructorSearchCandidate candidate,
+      String firstName,
+      String lastName,
+      String teamName,
+      UserStatus status) {
+    if (status != null && candidate.user().getStatus() != status) {
+      return false;
+    }
+    if (firstName != null && !sortText(candidate.nameParts().firstName()).contains(sortText(firstName))) {
+      return false;
+    }
+    if (lastName != null && !sortText(candidate.nameParts().lastName()).contains(sortText(lastName))) {
+      return false;
+    }
+    if (teamName != null && candidate.supervisedTeams().stream()
+        .noneMatch(team -> sortText(team.teamName()).contains(sortText(teamName)))) {
+      return false;
+    }
+    return true;
+  }
+
+  private int academicYearStart(String academicYear) {
+    if (academicYear == null) {
+      return -1;
+    }
+    String trimmed = academicYear.trim();
+    if (trimmed.length() < 4) {
+      return -1;
+    }
+    try {
+      return Integer.parseInt(trimmed.substring(0, 4));
+    } catch (NumberFormatException ex) {
+      return -1;
+    }
+  }
+
+  private int sortSectionAcademicYear(Long sectionId, Map<Long, Section> sectionsById) {
+    Section section = sectionsById.get(sectionId);
+    return section == null ? -1 : academicYearStart(section.getAcademicYear());
+  }
+
   private UserResponse toResponse(ProjectUser user) {
     return new UserResponse(
         user.getId(),
@@ -368,4 +478,11 @@ public class UserService {
   }
 
   private record NameParts(String firstName, String lastName) {}
+
+  private record InstructorSearchCandidate(
+      ProjectUser user,
+      NameParts nameParts,
+      List<InstructorSupervisedTeamResponse> supervisedTeams,
+      int latestAcademicYearStart,
+      InstructorSearchResultResponse response) {}
 }

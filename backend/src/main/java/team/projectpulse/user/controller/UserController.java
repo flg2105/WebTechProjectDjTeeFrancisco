@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.projectpulse.system.Result;
 import team.projectpulse.user.domain.UserRole;
+import team.projectpulse.user.domain.UserStatus;
 import team.projectpulse.user.dto.DeactivateInstructorRequest;
 import team.projectpulse.user.dto.EditAccountRequest;
 import team.projectpulse.user.dto.InstructorDetailsResponse;
@@ -85,8 +86,11 @@ public class UserController {
   @GetMapping("/api/instructors")
   @PreAuthorize("hasRole('ADMIN')")
   public Result<List<InstructorSearchResultResponse>> findInstructors(
-      @RequestParam(required = false) String q) {
-    return Result.ok("Find Instructors Success", userService.findInstructors(q));
+      @RequestParam(required = false) String firstName,
+      @RequestParam(required = false) String lastName,
+      @RequestParam(required = false) String teamName,
+      @RequestParam(required = false) UserStatus status) {
+    return Result.ok("Find Instructors Success", userService.findInstructors(firstName, lastName, teamName, status));
   }
 
   @GetMapping("/api/instructors/{id}")
