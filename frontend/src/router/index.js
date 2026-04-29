@@ -8,6 +8,7 @@ import TeamsView from '../features/teams/TeamsView.vue'
 import RubricsView from '../features/rubrics/RubricsView.vue'
 import WarView from '../features/war/WarView.vue'
 import PeerEvalView from '../features/peereval/PeerEvalView.vue'
+import ReportsView from '../features/reports/ReportsView.vue'
 
 const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
@@ -16,7 +17,8 @@ const routes = [
   { path: '/teams', name: 'teams', component: TeamsView },
   { path: '/rubrics', name: 'rubrics', component: RubricsView },
   { path: '/war', name: 'war', component: WarView },
-  { path: '/peer-eval', name: 'peerEval', component: PeerEvalView }
+  { path: '/peer-eval', name: 'peerEval', component: PeerEvalView },
+  { path: '/reports', name: 'reports', component: ReportsView }
 ]
 
 const router = createRouter({

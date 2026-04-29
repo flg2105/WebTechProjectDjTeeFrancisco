@@ -47,7 +47,8 @@ const navItems = [
   { to: '/teams', label: 'Teams', caption: 'Assignments and rosters', icon: 'T', roles: ['ADMIN', 'INSTRUCTOR'] },
   { to: '/rubrics', label: 'Rubrics', caption: 'Scoring frameworks', icon: 'R', roles: ['ADMIN'] },
   { to: '/war', label: 'WAR', caption: 'Weekly activity reports', icon: 'W', roles: ['STUDENT', 'INSTRUCTOR'] },
-  { to: '/peer-eval', label: 'Peer Eval', caption: 'Submissions and reports', icon: 'P', roles: ['STUDENT', 'INSTRUCTOR'] }
+  { to: '/peer-eval', label: 'Peer Eval', caption: 'Submissions and reports', icon: 'P', roles: ['STUDENT', 'INSTRUCTOR'] },
+  { to: '/reports', label: 'Reports', caption: 'Instructor reporting', icon: 'R', roles: ['INSTRUCTOR'] }
 ]
 
 const visibleNavItems = computed(() => {
