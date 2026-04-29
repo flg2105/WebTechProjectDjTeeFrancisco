@@ -63,8 +63,8 @@ Notes:
 - WAR API wiring lives in `frontend/src/features/war/warService.js` via `frontend/src/shared/services/apiClient.js`.
 
 ### Instructor reporting views (missing)
-- [ ] Add UI screens/routes for instructor reporting flows (UC-31..UC-34) (`requirements/3_Use_Cases.md`)
-- [ ] Wire report pages to backend endpoints and align messaging/error states with `docs/api-guidelines.md`
+- [x] Add UI screens/routes for instructor reporting flows (UC-31..UC-34) (`requirements/3_Use_Cases.md`)
+- [x] Wire report pages to backend endpoints and align messaging/error states with `docs/api-guidelines.md`
 
 ### Instructor administration (blocked by backend gaps)
 - [ ] Add UI for instructor view/deactivate/reactivate (UC-22..UC-24) once backend APIs exist (`requirements/3_Use_Cases.md`)
