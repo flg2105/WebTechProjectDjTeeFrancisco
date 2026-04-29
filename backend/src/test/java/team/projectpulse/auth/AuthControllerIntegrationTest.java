@@ -1,8 +1,10 @@
 package team.projectpulse.auth;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static team.projectpulse.system.StatusCode.SUCCESS;
 import static team.projectpulse.system.StatusCode.UNAUTHORIZED;
@@ -40,6 +42,17 @@ class AuthControllerIntegrationTest {
         .andExpect(jsonPath("$.data.accessToken").isString())
         .andExpect(jsonPath("$.data.email").value("auth.student@example.edu"))
         .andExpect(jsonPath("$.data.role").value("STUDENT"));
+  }
+
+  @Test
+  void should_AllowCorsPreflight_ForLogin() throws Exception {
+    mvc.perform(options("/api/auth/login")
+            .header(HttpHeaders.ORIGIN, "http://localhost:5173")
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+            .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, HttpHeaders.AUTHORIZATION))
+        .andExpect(status().isOk())
+        .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:5173"))
+        .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, org.hamcrest.Matchers.containsString("POST")));
   }
 
   @Test
