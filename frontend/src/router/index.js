@@ -4,6 +4,7 @@ import { authSession } from '../shared/services/authSession'
 import HomeView from '../features/home/HomeView.vue'
 import LoginView from '../features/auth/LoginView.vue'
 import SectionsView from '../features/sections/SectionsView.vue'
+import InstructorsView from '../features/instructors/InstructorsView.vue'
 import TeamsView from '../features/teams/TeamsView.vue'
 import RubricsView from '../features/rubrics/RubricsView.vue'
 import WarView from '../features/war/WarView.vue'
@@ -14,6 +15,7 @@ const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
   { path: '/', name: 'home', component: HomeView },
   { path: '/sections', name: 'sections', component: SectionsView },
+  { path: '/instructors', name: 'instructors', component: InstructorsView, meta: { roles: ['ADMIN'] } },
   { path: '/teams', name: 'teams', component: TeamsView },
   { path: '/rubrics', name: 'rubrics', component: RubricsView },
   { path: '/war', name: 'war', component: WarView },
@@ -41,6 +43,9 @@ router.beforeEach(async (to) => {
   try {
     if (!authSession.currentUser?.role) {
       await authSession.refreshCurrentUser()
+    }
+    if (to.meta.roles && !to.meta.roles.includes(authSession.currentUser?.role)) {
+      return { path: '/' }
     }
     return true
   } catch {

@@ -12,6 +12,7 @@ import static team.projectpulse.system.StatusCode.SUCCESS;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -21,8 +22,16 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import team.projectpulse.rubric.domain.Rubric;
+import team.projectpulse.rubric.repository.RubricRepository;
+import team.projectpulse.section.domain.Section;
+import team.projectpulse.section.repository.SectionRepository;
+import team.projectpulse.team.domain.Team;
+import team.projectpulse.team.domain.TeamInstructorAssignment;
 import team.projectpulse.team.domain.TeamMembership;
+import team.projectpulse.team.repository.TeamInstructorAssignmentRepository;
 import team.projectpulse.team.repository.TeamMembershipRepository;
+import team.projectpulse.team.repository.TeamRepository;
 import team.projectpulse.user.domain.Invitation;
 import team.projectpulse.user.domain.UserRole;
 import team.projectpulse.user.repository.InvitationRepository;
@@ -40,6 +49,18 @@ class UserPhaseThreeIntegrationTest {
 
   @Autowired
   private InvitationRepository invitationRepository;
+
+  @Autowired
+  private RubricRepository rubricRepository;
+
+  @Autowired
+  private SectionRepository sectionRepository;
+
+  @Autowired
+  private TeamRepository teamRepository;
+
+  @Autowired
+  private TeamInstructorAssignmentRepository teamInstructorAssignmentRepository;
 
   @Test
   void should_EditAccount_ById() throws Exception {
@@ -126,6 +147,84 @@ class UserPhaseThreeIntegrationTest {
   }
 
   @Test
+  void should_ViewInstructor_WithSupervisedTeams() throws Exception {
+    Long instructorId = setupInstructor("phase3.viewinstructor@example.edu", "Ada Lovelace");
+    Long teamId = createSupervisedTeam(instructorId, "Capstone 2026", "Compiler Crew");
+
+    mvc.perform(get("/api/instructors/" + instructorId).with(admin()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.id").value(instructorId))
+        .andExpect(jsonPath("$.data.firstName").value("Ada"))
+        .andExpect(jsonPath("$.data.lastName").value("Lovelace"))
+        .andExpect(jsonPath("$.data.supervisedTeams.length()").value(1))
+        .andExpect(jsonPath("$.data.supervisedTeams[0].teamId").value(teamId))
+        .andExpect(jsonPath("$.data.supervisedTeams[0].sectionName").value("Capstone 2026"))
+        .andExpect(jsonPath("$.data.supervisedTeams[0].teamName").value("Compiler Crew"));
+  }
+
+  @Test
+  void should_DeactivateInstructor_AndKeepRecord() throws Exception {
+    Long instructorId = setupInstructor("phase3.deactivate.instructor@example.edu", "Grace Hopper");
+
+    mvc.perform(post("/api/instructors/" + instructorId + "/deactivate")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "reason": "Instructor left the section."
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.id").value(instructorId))
+        .andExpect(jsonPath("$.data.status").value("INACTIVE"));
+
+    mvc.perform(get("/api/instructors/" + instructorId).with(admin()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.status").value("INACTIVE"));
+  }
+
+  @Test
+  void should_ReactivateInstructor() throws Exception {
+    Long instructorId = setupInstructor("phase3.reactivate.instructor@example.edu", "Katherine Johnson");
+
+    mvc.perform(post("/api/instructors/" + instructorId + "/deactivate")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "reason": "Temporary leave."
+                }
+                """))
+        .andExpect(status().isOk());
+
+    mvc.perform(post("/api/instructors/" + instructorId + "/reactivate").with(admin()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+  }
+
+  @Test
+  void should_RejectInstructorDeactivate_When_NotAdmin() throws Exception {
+    Long instructorId = setupInstructor("phase3.forbidden.instructor@example.edu", "Denied User");
+
+    mvc.perform(post("/api/instructors/" + instructorId + "/deactivate")
+            .with(instructor())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "reason": "Should fail."
+                }
+                """))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.flag").value(false));
+  }
+
+  @Test
   void should_DeleteStudent_AndCleanupMembershipsAndInvites() throws Exception {
     String email = "phase3.deleteme@example.edu";
     Long studentId = setupStudent(email, "Delete Me");
@@ -200,6 +299,32 @@ class UserPhaseThreeIntegrationTest {
     int start = body.indexOf(marker) + marker.length();
     int end = body.indexOf(",", start);
     return Long.valueOf(body.substring(start, end));
+  }
+
+  private Long createSupervisedTeam(Long instructorUserId, String sectionName, String teamName) {
+    Rubric rubric = new Rubric();
+    rubric.setName("Instructor View Rubric " + instructorUserId);
+    rubric = rubricRepository.save(rubric);
+
+    Section section = new Section();
+    section.setName(sectionName);
+    section.setAcademicYear("2026-2027");
+    section.setStartDate(LocalDate.of(2026, 1, 12));
+    section.setEndDate(LocalDate.of(2026, 5, 1));
+    section.setRubricId(rubric.getId());
+    section = sectionRepository.save(section);
+
+    Team team = new Team();
+    team.setSectionId(section.getId());
+    team.setName(teamName);
+    team = teamRepository.save(team);
+
+    TeamInstructorAssignment assignment = new TeamInstructorAssignment();
+    assignment.setTeamId(team.getId());
+    assignment.setInstructorUserId(instructorUserId);
+    teamInstructorAssignmentRepository.save(assignment);
+
+    return team.getId();
   }
 
   private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {

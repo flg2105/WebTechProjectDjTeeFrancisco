@@ -31,9 +31,9 @@ Notes:
 - Align storage and module boundaries with `docs/database-design.md` and layering rules in `docs/architecture.md`.
 
 ### Instructor management (missing/partial)
-- [ ] UC-22: Admin views an instructor (`requirements/3_Use_Cases.md`)
-- [ ] UC-23: Admin deactivates an instructor (`requirements/3_Use_Cases.md`)
-- [ ] UC-24: Admin reactivates an instructor (`requirements/3_Use_Cases.md`)
+- [x] UC-22: Admin views an instructor (`requirements/3_Use_Cases.md`)
+- [x] UC-23: Admin deactivates an instructor (`requirements/3_Use_Cases.md`)
+- [x] UC-24: Admin reactivates an instructor (`requirements/3_Use_Cases.md`)
 
 Notes:
 - `GET /api/instructors` exists, but there is no instructor “details” read and no status transition endpoint.
@@ -67,7 +67,7 @@ Notes:
 - [x] Wire report pages to backend endpoints and align messaging/error states with `docs/api-guidelines.md`
 
 ### Instructor administration (blocked by backend gaps)
-- [ ] Add UI for instructor view/deactivate/reactivate (UC-22..UC-24) once backend APIs exist (`requirements/3_Use_Cases.md`)
+- [x] Add UI for instructor view/deactivate/reactivate (UC-22..UC-24) once backend APIs exist (`requirements/3_Use_Cases.md`)
 - [x] Add UI for assigning/removing instructors to teams (UC-19/UC-20) once backend APIs exist (`requirements/3_Use_Cases.md`)
 
 ---
