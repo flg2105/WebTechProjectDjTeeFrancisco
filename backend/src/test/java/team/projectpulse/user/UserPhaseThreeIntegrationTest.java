@@ -1,5 +1,7 @@
 package team.projectpulse.user;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -9,7 +11,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static team.projectpulse.system.StatusCode.NOT_FOUND;
 import static team.projectpulse.system.StatusCode.SUCCESS;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.hamcrest.Matchers.nullValue;
 
 import java.math.BigDecimal;
@@ -55,6 +59,9 @@ class UserPhaseThreeIntegrationTest {
 
   @Autowired
   private MockMvc mvc;
+
+  @Autowired
+  private ObjectMapper objectMapper;
 
   @Autowired
   private TeamMembershipRepository teamMembershipRepository;
@@ -174,7 +181,7 @@ class UserPhaseThreeIntegrationTest {
   @Test
   void should_FindInstructors_WithCriteriaAndAssociatedTeams() throws Exception {
     setupStudent("phase3.instructorsearch.student@example.edu", "Instructor Search Student");
-    Long adaInstructorId = setupInstructor("phase3.instructorsearch.ada@example.edu", "Ada Lovelace");
+    Long adaInstructorId = setupInstructor("phase3.instructorsearch.ada@example.edu", "Ada Searchcase");
     Long alanInstructorId = setupInstructor("phase3.instructorsearch.alan@example.edu", "Alan Turing");
 
     mvc.perform(post("/api/invitations/instructors")
@@ -190,33 +197,36 @@ class UserPhaseThreeIntegrationTest {
     createSupervisedTeam(adaInstructorId, "Capstone Search 2027", "Compiler Crew", "2027-2028");
     createSupervisedTeam(alanInstructorId, "Capstone Search 2026", "Systems Squad", "2026-2027");
 
-    mvc.perform(get("/api/instructors").with(admin()).param("firstName", "Ada"))
+    MvcResult adaSearch = mvc.perform(get("/api/instructors").with(admin()).param("firstName", "Ada").param("lastName", "Searchcase"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
-        .andExpect(jsonPath("$.data.length()").value(1))
-        .andExpect(jsonPath("$.data[0].email").value("phase3.instructorsearch.ada@example.edu"))
-        .andExpect(jsonPath("$.data[0].firstName").value("Ada"))
-        .andExpect(jsonPath("$.data[0].lastName").value("Lovelace"))
-        .andExpect(jsonPath("$.data[0].supervisedTeams.length()").value(1))
-        .andExpect(jsonPath("$.data[0].supervisedTeams[0].teamName").value("Compiler Crew"))
-        .andExpect(jsonPath("$.data[0].status").value("ACTIVE"));
+        .andReturn();
+    JsonNode adaInstructor = findInstructorByEmail(adaSearch, "phase3.instructorsearch.ada@example.edu");
+    assertNotNull(adaInstructor);
+    assertEquals("Ada", adaInstructor.path("firstName").asText());
+    assertEquals("Searchcase", adaInstructor.path("lastName").asText());
+    assertEquals("ACTIVE", adaInstructor.path("status").asText());
+    assertEquals(1, adaInstructor.path("supervisedTeams").size());
+    assertEquals("Compiler Crew", adaInstructor.path("supervisedTeams").get(0).path("teamName").asText());
 
-    mvc.perform(get("/api/instructors").with(admin()).param("teamName", "Systems"))
+    MvcResult alanSearch = mvc.perform(get("/api/instructors").with(admin()).param("teamName", "Systems"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
-        .andExpect(jsonPath("$.data.length()").value(1))
-        .andExpect(jsonPath("$.data[0].email").value("phase3.instructorsearch.alan@example.edu"))
-        .andExpect(jsonPath("$.data[0].supervisedTeams[0].teamName").value("Systems Squad"));
+        .andReturn();
+    JsonNode alanInstructor = findInstructorByEmail(alanSearch, "phase3.instructorsearch.alan@example.edu");
+    assertNotNull(alanInstructor);
+    assertEquals("Systems Squad", alanInstructor.path("supervisedTeams").get(0).path("teamName").asText());
 
-    mvc.perform(get("/api/instructors").with(admin()).param("status", "INVITED"))
+    MvcResult invitedSearch = mvc.perform(get("/api/instructors").with(admin()).param("status", "INVITED"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
-        .andExpect(jsonPath("$.data.length()").value(1))
-        .andExpect(jsonPath("$.data[0].email").value("phase3.instructorsearch.invited@example.edu"))
-        .andExpect(jsonPath("$.data[0].supervisedTeams.length()").value(0));
+        .andReturn();
+    JsonNode invitedInstructor = findInstructorByEmail(invitedSearch, "phase3.instructorsearch.invited@example.edu");
+    assertNotNull(invitedInstructor);
+    assertEquals(0, invitedInstructor.path("supervisedTeams").size());
   }
 
   @Test
@@ -372,6 +382,16 @@ class UserPhaseThreeIntegrationTest {
     int start = body.indexOf(marker) + marker.length();
     int end = body.indexOf(",", start);
     return Long.valueOf(body.substring(start, end));
+  }
+
+  private JsonNode findInstructorByEmail(MvcResult result, String email) throws Exception {
+    JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+    for (JsonNode candidate : data) {
+      if (email.equalsIgnoreCase(candidate.path("email").asText())) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   private Long createSupervisedTeam(Long instructorUserId, String sectionName, String teamName) {

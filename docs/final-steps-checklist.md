@@ -85,7 +85,7 @@ Auth is explicitly deferred for the prototype per `docs/decisions/0001-auth-dire
 
 ## Quality Gate (Project “Done”)
 
-- [ ] Every implemented endpoint returns the standard `Result` envelope (`docs/api-guidelines.md`)
-- [ ] Core service logic has automated tests (at least 1 per new endpoint) (`docs/testing-strategy.md`)
-- [ ] CI is green: backend tests + frontend build (`.github/workflows/ci.yml`)
-- [ ] No use-case-critical placeholders remain in the UI (notably WAR and reporting pages)
+- [x] Every implemented endpoint returns the standard `Result` envelope (`docs/api-guidelines.md`)
+- [x] Core service logic has automated tests (at least 1 per new endpoint) (`docs/testing-strategy.md`)
+- [x] CI is green: backend tests + frontend build (`.github/workflows/ci.yml`)
+- [x] No use-case-critical placeholders remain in the UI (notably WAR and reporting pages)
