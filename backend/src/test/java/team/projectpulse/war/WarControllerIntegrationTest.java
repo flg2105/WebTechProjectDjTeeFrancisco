@@ -189,6 +189,33 @@ class WarControllerIntegrationTest {
         .andExpect(jsonPath("$.message").value("No WAR report data available for the selected period"));
   }
 
+  @Test
+  void should_GenerateTeamWarReport_WithMissingSubmissions() throws Exception {
+    Long rubricId = createRubric("WAR Team Report Rubric");
+    LocalDate currentMonday = LocalDate.now().with(DayOfWeek.MONDAY);
+    Long sectionId = createSection("WAR Team Report Section", rubricId, currentMonday.minusWeeks(2), currentMonday.plusWeeks(2));
+    Long activeWeekId = createActiveWeek(sectionId, currentMonday, true);
+    Long studentOne = setupStudent("war.team.report.one@example.edu", "WAR Team Report Student One");
+    Long studentTwo = setupStudent("war.team.report.two@example.edu", "WAR Team Report Student Two");
+    Long teamId = createTeam(sectionId, "WAR Team Report Team");
+    assignStudent(teamId, studentOne);
+    assignStudent(teamId, studentTwo);
+
+    addActivity("war.team.report.one@example.edu", studentOne, activeWeekId, "DEVELOPMENT", "Team report activity");
+
+    mvc.perform(get("/api/wars/team-report")
+            .with(instructor())
+            .param("teamId", String.valueOf(teamId))
+            .param("activeWeekId", String.valueOf(activeWeekId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.teamId").value(teamId))
+        .andExpect(jsonPath("$.data.activeWeekId").value(activeWeekId))
+        .andExpect(jsonPath("$.data.memberReports.length()").value(2))
+        .andExpect(jsonPath("$.data.missingSubmissions.length()").value(1));
+  }
+
   private Long createRubric(String name) throws Exception {
     MvcResult result = mvc.perform(post("/api/rubrics")
             .with(admin())

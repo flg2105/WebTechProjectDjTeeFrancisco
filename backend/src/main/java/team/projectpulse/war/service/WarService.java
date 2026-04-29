@@ -3,7 +3,9 @@ package team.projectpulse.war.service;
 import java.time.LocalDate;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import team.projectpulse.auth.service.CurrentUserSecurity;
@@ -23,6 +25,8 @@ import team.projectpulse.war.dto.WarActivityRequest;
 import team.projectpulse.war.dto.WarActivityResponse;
 import team.projectpulse.war.dto.WarEntryResponse;
 import team.projectpulse.war.dto.WarStudentReportResponse;
+import team.projectpulse.war.dto.WarTeamMemberReportResponse;
+import team.projectpulse.war.dto.WarTeamReportResponse;
 import team.projectpulse.war.repository.WarEntryRepository;
 
 @Service
@@ -99,6 +103,58 @@ public class WarService {
         startWeek.getWeekStartDate(),
         endWeek.getWeekStartDate(),
         entries);
+  }
+
+  public WarTeamReportResponse findTeamReport(Long teamId, Long activeWeekId) {
+    validatePositive(teamId, "teamId");
+    validatePositive(activeWeekId, "activeWeekId");
+
+    Team team = teamRepository.findById(teamId)
+        .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "Team not found with id " + teamId));
+    ActiveWeek activeWeek = getActiveWeek(activeWeekId);
+    validateWeek(activeWeek);
+
+    if (!team.getSectionId().equals(activeWeek.getSectionId())) {
+      throw new ApiException(StatusCode.INVALID_ARGUMENT, "Team must belong to the active week's section");
+    }
+
+    List<TeamMembership> memberships = teamMembershipRepository.findByTeamIdOrderByStudentUserIdAsc(teamId);
+    List<Long> memberIds = memberships.stream().map(TeamMembership::getStudentUserId).toList();
+
+    Map<Long, String> displayNames = userRepository.findAllById(memberIds).stream()
+        .collect(Collectors.toMap(
+            user -> user.getId(),
+            user -> user.getDisplayName()));
+
+    List<WarTeamMemberReportResponse> memberReports = memberIds.stream()
+        .map(studentUserId -> {
+          String displayName = displayNames.getOrDefault(studentUserId, "Student " + studentUserId);
+          return warEntryRepository.findByActiveWeekIdAndStudentUserId(activeWeekId, studentUserId)
+              .map(entry -> new WarTeamMemberReportResponse(
+                  studentUserId,
+                  displayName,
+                  true,
+                  toResponse(entry, activeWeek)))
+              .orElseGet(() -> new WarTeamMemberReportResponse(
+                  studentUserId,
+                  displayName,
+                  false,
+                  emptyResponse(activeWeek, teamId, studentUserId)));
+        })
+        .toList();
+
+    List<WarTeamMemberReportResponse> missingSubmissions = memberReports.stream()
+        .filter(report -> !report.submitted())
+        .toList();
+
+    return new WarTeamReportResponse(
+        teamId,
+        team.getName(),
+        team.getSectionId(),
+        activeWeekId,
+        activeWeek.getWeekStartDate(),
+        memberReports,
+        missingSubmissions);
   }
 
   @Transactional
