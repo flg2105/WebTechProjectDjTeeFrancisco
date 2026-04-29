@@ -47,9 +47,9 @@ Notes:
 - Peer evaluation reporting endpoints exist for section/student, but UX + access control still need completion.
 
 ### “View details” completeness (partial)
-- [ ] UC-3: View a senior design section — ensure the section details view matches required contents (teams, members, instructors, unassigned lists, rubric) (`requirements/3_Use_Cases.md`)
-- [ ] UC-16: View a student — ensure `StudentDetailsResponse` is populated with the required details (`requirements/3_Use_Cases.md`)
-- [ ] UC-21: Find instructors — ensure results include any required associations (team assignment fields are currently blank) (`requirements/3_Use_Cases.md`)
+- [x] UC-3: View a senior design section — ensure the section details view matches required contents (teams, members, instructors, unassigned lists, rubric) (`requirements/3_Use_Cases.md`)
+- [x] UC-16: View a student — ensure `StudentDetailsResponse` is populated with the required details (`requirements/3_Use_Cases.md`)
+- [x] UC-21: Find instructors — ensure results include any required associations (team assignment fields are currently blank) (`requirements/3_Use_Cases.md`)
 
 ---
 
@@ -85,7 +85,7 @@ Auth is explicitly deferred for the prototype per `docs/decisions/0001-auth-dire
 
 ## Quality Gate (Project “Done”)
 
-- [ ] Every implemented endpoint returns the standard `Result` envelope (`docs/api-guidelines.md`)
-- [ ] Core service logic has automated tests (at least 1 per new endpoint) (`docs/testing-strategy.md`)
-- [ ] CI is green: backend tests + frontend build (`.github/workflows/ci.yml`)
-- [ ] No use-case-critical placeholders remain in the UI (notably WAR and reporting pages)
+- [x] Every implemented endpoint returns the standard `Result` envelope (`docs/api-guidelines.md`)
+- [x] Core service logic has automated tests (at least 1 per new endpoint) (`docs/testing-strategy.md`)
+- [x] CI is green: backend tests + frontend build (`.github/workflows/ci.yml`)
+- [x] No use-case-critical placeholders remain in the UI (notably WAR and reporting pages)

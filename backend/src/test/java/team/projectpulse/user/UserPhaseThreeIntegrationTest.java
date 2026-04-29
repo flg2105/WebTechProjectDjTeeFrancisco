@@ -1,5 +1,7 @@
 package team.projectpulse.user;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -9,9 +11,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static team.projectpulse.system.StatusCode.NOT_FOUND;
 import static team.projectpulse.system.StatusCode.SUCCESS;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.hamcrest.Matchers.nullValue;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,9 +27,15 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import team.projectpulse.peereval.domain.PeerEvaluationEntry;
+import team.projectpulse.peereval.domain.PeerEvaluationScore;
+import team.projectpulse.peereval.domain.PeerEvaluationSubmission;
+import team.projectpulse.peereval.repository.PeerEvaluationSubmissionRepository;
 import team.projectpulse.rubric.domain.Rubric;
 import team.projectpulse.rubric.repository.RubricRepository;
+import team.projectpulse.section.domain.ActiveWeek;
 import team.projectpulse.section.domain.Section;
+import team.projectpulse.section.repository.ActiveWeekRepository;
 import team.projectpulse.section.repository.SectionRepository;
 import team.projectpulse.team.domain.Team;
 import team.projectpulse.team.domain.TeamInstructorAssignment;
@@ -35,6 +46,11 @@ import team.projectpulse.team.repository.TeamRepository;
 import team.projectpulse.user.domain.Invitation;
 import team.projectpulse.user.domain.UserRole;
 import team.projectpulse.user.repository.InvitationRepository;
+import team.projectpulse.war.domain.WarActivity;
+import team.projectpulse.war.domain.WarActivityCategory;
+import team.projectpulse.war.domain.WarActivityStatus;
+import team.projectpulse.war.domain.WarEntry;
+import team.projectpulse.war.repository.WarEntryRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -43,6 +59,9 @@ class UserPhaseThreeIntegrationTest {
 
   @Autowired
   private MockMvc mvc;
+
+  @Autowired
+  private ObjectMapper objectMapper;
 
   @Autowired
   private TeamMembershipRepository teamMembershipRepository;
@@ -57,10 +76,19 @@ class UserPhaseThreeIntegrationTest {
   private SectionRepository sectionRepository;
 
   @Autowired
+  private ActiveWeekRepository activeWeekRepository;
+
+  @Autowired
   private TeamRepository teamRepository;
 
   @Autowired
   private TeamInstructorAssignmentRepository teamInstructorAssignmentRepository;
+
+  @Autowired
+  private WarEntryRepository warEntryRepository;
+
+  @Autowired
+  private PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository;
 
   @Test
   void should_EditAccount_ById() throws Exception {
@@ -120,30 +148,85 @@ class UserPhaseThreeIntegrationTest {
   }
 
   @Test
-  void should_ViewStudent_WithStubbedWarAndPeerEvalFields() throws Exception {
+  void should_ViewStudent_WithSectionTeamWarsAndPeerEvaluations() throws Exception {
     Long studentId = setupStudent("phase3.viewme@example.edu", "View Me");
+    Long evaluatorId = setupStudent("phase3.evaluator@example.edu", "Peer Reviewer");
+    StudentTeamContext context = createStudentTeamContext(
+        studentId,
+        evaluatorId,
+        "Capstone Students 2026",
+        "Product Crew",
+        "2026-2027");
+    createWarForStudent(studentId, context.activeWeekId(), context.teamId());
+    createPeerEvaluationForStudent(studentId, evaluatorId, context.sectionId(), context.teamId(), context.weekStartDate());
 
     mvc.perform(get("/api/students/" + studentId).with(instructor()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
         .andExpect(jsonPath("$.data.id").value(studentId))
-        .andExpect(jsonPath("$.data.warEntryIds.length()").value(0))
-        .andExpect(jsonPath("$.data.peerEvaluationIds.length()").value(0));
+        .andExpect(jsonPath("$.data.firstName").value("View"))
+        .andExpect(jsonPath("$.data.lastName").value("Me"))
+        .andExpect(jsonPath("$.data.sectionName").value("Capstone Students 2026"))
+        .andExpect(jsonPath("$.data.teamName").value("Product Crew"))
+        .andExpect(jsonPath("$.data.wars.length()").value(1))
+        .andExpect(jsonPath("$.data.wars[0].teamName").value("Product Crew"))
+        .andExpect(jsonPath("$.data.wars[0].activityCount").value(1))
+        .andExpect(jsonPath("$.data.peerEvaluations.length()").value(1))
+        .andExpect(jsonPath("$.data.peerEvaluations[0].evaluatorDisplayName").value("Peer Reviewer"))
+        .andExpect(jsonPath("$.data.peerEvaluations[0].teamName").value("Product Crew"))
+        .andExpect(jsonPath("$.data.peerEvaluations[0].averageScore").value(9.0));
   }
 
   @Test
-  void should_FindInstructors_AsLookupStub() throws Exception {
-    setupStudent("phase3.instructorstub.student@example.edu", "Instructor Stub Student");
-    setupInstructor("phase3.instructorstub.instructor@example.edu", "Instructor Stub Instructor");
+  void should_FindInstructors_WithCriteriaAndAssociatedTeams() throws Exception {
+    setupStudent("phase3.instructorsearch.student@example.edu", "Instructor Search Student");
+    Long adaInstructorId = setupInstructor("phase3.instructorsearch.ada@example.edu", "Ada Searchcase");
+    Long alanInstructorId = setupInstructor("phase3.instructorsearch.alan@example.edu", "Alan Turing");
 
-    mvc.perform(get("/api/instructors").with(admin()).param("q", "phase3.instructorstub"))
+    mvc.perform(post("/api/invitations/instructors")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "emails": ["phase3.instructorsearch.invited@example.edu"]
+                }
+                """))
+        .andExpect(status().isOk());
+
+    createSupervisedTeam(adaInstructorId, "Capstone Search 2027", "Compiler Crew", "2027-2028");
+    createSupervisedTeam(alanInstructorId, "Capstone Search 2026", "Systems Squad", "2026-2027");
+
+    MvcResult adaSearch = mvc.perform(get("/api/instructors").with(admin()).param("firstName", "Ada").param("lastName", "Searchcase"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
-        .andExpect(jsonPath("$.data.length()").value(1))
-        .andExpect(jsonPath("$.data[0].email").value("phase3.instructorstub.instructor@example.edu"))
-        .andExpect(jsonPath("$.data[0].status").value("ACTIVE"));
+        .andReturn();
+    JsonNode adaInstructor = findInstructorByEmail(adaSearch, "phase3.instructorsearch.ada@example.edu");
+    assertNotNull(adaInstructor);
+    assertEquals("Ada", adaInstructor.path("firstName").asText());
+    assertEquals("Searchcase", adaInstructor.path("lastName").asText());
+    assertEquals("ACTIVE", adaInstructor.path("status").asText());
+    assertEquals(1, adaInstructor.path("supervisedTeams").size());
+    assertEquals("Compiler Crew", adaInstructor.path("supervisedTeams").get(0).path("teamName").asText());
+
+    MvcResult alanSearch = mvc.perform(get("/api/instructors").with(admin()).param("teamName", "Systems"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andReturn();
+    JsonNode alanInstructor = findInstructorByEmail(alanSearch, "phase3.instructorsearch.alan@example.edu");
+    assertNotNull(alanInstructor);
+    assertEquals("Systems Squad", alanInstructor.path("supervisedTeams").get(0).path("teamName").asText());
+
+    MvcResult invitedSearch = mvc.perform(get("/api/instructors").with(admin()).param("status", "INVITED"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andReturn();
+    JsonNode invitedInstructor = findInstructorByEmail(invitedSearch, "phase3.instructorsearch.invited@example.edu");
+    assertNotNull(invitedInstructor);
+    assertEquals(0, invitedInstructor.path("supervisedTeams").size());
   }
 
   @Test
@@ -301,14 +384,28 @@ class UserPhaseThreeIntegrationTest {
     return Long.valueOf(body.substring(start, end));
   }
 
+  private JsonNode findInstructorByEmail(MvcResult result, String email) throws Exception {
+    JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+    for (JsonNode candidate : data) {
+      if (email.equalsIgnoreCase(candidate.path("email").asText())) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
   private Long createSupervisedTeam(Long instructorUserId, String sectionName, String teamName) {
+    return createSupervisedTeam(instructorUserId, sectionName, teamName, "2026-2027");
+  }
+
+  private Long createSupervisedTeam(Long instructorUserId, String sectionName, String teamName, String academicYear) {
     Rubric rubric = new Rubric();
     rubric.setName("Instructor View Rubric " + instructorUserId);
     rubric = rubricRepository.save(rubric);
 
     Section section = new Section();
     section.setName(sectionName);
-    section.setAcademicYear("2026-2027");
+    section.setAcademicYear(academicYear);
     section.setStartDate(LocalDate.of(2026, 1, 12));
     section.setEndDate(LocalDate.of(2026, 5, 1));
     section.setRubricId(rubric.getId());
@@ -327,6 +424,92 @@ class UserPhaseThreeIntegrationTest {
     return team.getId();
   }
 
+  private StudentTeamContext createStudentTeamContext(
+      Long studentId,
+      Long evaluatorStudentId,
+      String sectionName,
+      String teamName,
+      String academicYear) {
+    Rubric rubric = new Rubric();
+    rubric.setName("Student View Rubric " + studentId);
+    rubric = rubricRepository.save(rubric);
+
+    Section section = new Section();
+    section.setName(sectionName);
+    section.setAcademicYear(academicYear);
+    section.setStartDate(LocalDate.of(2026, 1, 12));
+    section.setEndDate(LocalDate.of(2026, 5, 1));
+    section.setRubricId(rubric.getId());
+    section = sectionRepository.save(section);
+
+    Team team = new Team();
+    team.setSectionId(section.getId());
+    team.setName(teamName);
+    team = teamRepository.save(team);
+
+    TeamMembership studentMembership = new TeamMembership();
+    studentMembership.setTeamId(team.getId());
+    studentMembership.setStudentUserId(studentId);
+    teamMembershipRepository.save(studentMembership);
+
+    TeamMembership evaluatorMembership = new TeamMembership();
+    evaluatorMembership.setTeamId(team.getId());
+    evaluatorMembership.setStudentUserId(evaluatorStudentId);
+    teamMembershipRepository.save(evaluatorMembership);
+
+    ActiveWeek activeWeek = new ActiveWeek();
+    activeWeek.setSectionId(section.getId());
+    activeWeek.setWeekStartDate(LocalDate.of(2026, 2, 2));
+    activeWeek.setActive(true);
+    activeWeek = activeWeekRepository.save(activeWeek);
+
+    return new StudentTeamContext(section.getId(), team.getId(), activeWeek.getId(), activeWeek.getWeekStartDate());
+  }
+
+  private void createWarForStudent(Long studentId, Long activeWeekId, Long teamId) {
+    WarEntry entry = new WarEntry();
+    entry.setActiveWeekId(activeWeekId);
+    entry.setStudentUserId(studentId);
+    entry.setTeamId(teamId);
+
+    WarActivity activity = new WarActivity();
+    activity.setCategory(WarActivityCategory.DEVELOPMENT);
+    activity.setActivity("Implemented endpoint");
+    activity.setDescription("Built the student detail endpoint");
+    activity.setHoursPlanned(new BigDecimal("4.00"));
+    activity.setHoursActual(new BigDecimal("4.50"));
+    activity.setStatus(WarActivityStatus.DONE);
+    entry.addActivity(activity);
+
+    warEntryRepository.save(entry);
+  }
+
+  private void createPeerEvaluationForStudent(
+      Long studentId,
+      Long evaluatorStudentId,
+      Long sectionId,
+      Long teamId,
+      LocalDate weekStartDate) {
+    PeerEvaluationSubmission submission = new PeerEvaluationSubmission();
+    submission.setSectionId(sectionId);
+    submission.setTeamId(teamId);
+    submission.setEvaluatorStudentUserId(evaluatorStudentId);
+    submission.setWeekStartDate(weekStartDate);
+
+    PeerEvaluationEntry entry = new PeerEvaluationEntry();
+    entry.setEvaluateeStudentUserId(studentId);
+    entry.setPublicComment("Reliable teammate");
+    entry.setPrivateComment("Strong follow-through");
+
+    PeerEvaluationScore score = new PeerEvaluationScore();
+    score.setRubricCriterionId(1L);
+    score.setScore(new BigDecimal("9.00"));
+    entry.addScore(score);
+
+    submission.addEntry(entry);
+    peerEvaluationSubmissionRepository.save(submission);
+  }
+
   private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
     return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
   }
@@ -338,4 +521,10 @@ class UserPhaseThreeIntegrationTest {
   private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor student(String email) {
     return SecurityMockMvcRequestPostProcessors.user(email).roles("STUDENT");
   }
+
+  private record StudentTeamContext(
+      Long sectionId,
+      Long teamId,
+      Long activeWeekId,
+      LocalDate weekStartDate) {}
 }

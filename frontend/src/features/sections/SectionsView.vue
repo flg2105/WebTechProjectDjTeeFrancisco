@@ -65,12 +65,172 @@
             <p>Rubric ID {{ section.rubricId }} | {{ activeCount(section) }} active weeks</p>
           </div>
           <div class="button-row">
+            <button class="text-button" type="button" @click="openSectionDetails(section.id)">Details</button>
             <button class="text-button" type="button" @click="selectSection(section)">Edit</button>
             <button class="text-button" type="button" @click="prepareActiveWeeks(section)">Weeks</button>
           </div>
         </article>
       </div>
     </div>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Section Details</h2>
+      </div>
+      <div v-if="isLoadingDetails" class="empty-state">Loading section details...</div>
+      <div v-else-if="!selectedSectionDetails" class="empty-state">
+        Choose a section and select Details to inspect teams, assignments, and rubric coverage.
+      </div>
+      <div v-else class="stack-gap-lg">
+        <div class="detail-grid">
+          <div>
+            <p class="detail-label">Section</p>
+            <strong>{{ selectedSectionDetails.name }}</strong>
+          </div>
+          <div>
+            <p class="detail-label">Academic year</p>
+            <strong>{{ selectedSectionDetails.academicYear }}</strong>
+          </div>
+          <div>
+            <p class="detail-label">Start date</p>
+            <strong>{{ selectedSectionDetails.startDate }}</strong>
+          </div>
+          <div>
+            <p class="detail-label">End date</p>
+            <strong>{{ selectedSectionDetails.endDate }}</strong>
+          </div>
+          <div>
+            <p class="detail-label">Teams</p>
+            <strong>{{ selectedSectionDetails.teams.length }}</strong>
+          </div>
+          <div>
+            <p class="detail-label">Active weeks</p>
+            <strong>{{ activeCount(selectedSectionDetails) }}</strong>
+          </div>
+        </div>
+
+        <div class="stack-gap-sm">
+          <div class="section-heading align-start">
+            <div>
+              <h3>Teams, Members, and Instructors</h3>
+              <p class="helper mb-0">Each team shows its current student roster and supervising instructors.</p>
+            </div>
+          </div>
+          <div v-if="selectedSectionDetails.teams.length === 0" class="empty-state">
+            No teams are in this section yet.
+          </div>
+          <div v-else class="team-grid">
+            <article v-for="team in selectedSectionDetails.teams" :key="team.id" class="detail-card">
+              <div class="card-heading">
+                <h4>{{ team.name }}</h4>
+              </div>
+              <div class="stack-gap-sm">
+                <div>
+                  <p class="detail-label">Members</p>
+                  <div v-if="team.members.length === 0" class="empty-state compact">No students assigned.</div>
+                  <div v-else class="summary-list">
+                    <div v-for="member in team.members" :key="member.id" class="summary-item">
+                      <strong>{{ member.displayName }}</strong>
+                      <span>{{ member.email }}</span>
+                      <span>{{ statusLabel(member.status) }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <p class="detail-label">Instructors</p>
+                  <div v-if="team.instructors.length === 0" class="empty-state compact">No instructors assigned.</div>
+                  <div v-else class="summary-list">
+                    <div v-for="instructor in team.instructors" :key="instructor.id" class="summary-item">
+                      <strong>{{ instructor.displayName }}</strong>
+                      <span>{{ instructor.email }}</span>
+                      <span>{{ statusLabel(instructor.status) }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div class="layout-grid details-subgrid">
+          <div class="detail-card">
+            <div class="card-heading">
+              <h3>Instructors Not Assigned to a Team</h3>
+            </div>
+            <div v-if="selectedSectionDetails.unassignedInstructors.length === 0" class="empty-state compact">
+              Every section instructor is already assigned to a team.
+            </div>
+            <div v-else class="summary-list">
+              <div
+                v-for="instructor in selectedSectionDetails.unassignedInstructors"
+                :key="instructor.id"
+                class="summary-item"
+              >
+                <strong>{{ instructor.displayName }}</strong>
+                <span>{{ instructor.email }}</span>
+                <span>{{ statusLabel(instructor.status) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-card">
+            <div class="card-heading">
+              <h3>Students Not Assigned to a Team</h3>
+            </div>
+            <div v-if="selectedSectionDetails.unassignedStudents.length === 0" class="empty-state compact">
+              Every invited student is assigned to a team.
+            </div>
+            <div v-else class="summary-list">
+              <div
+                v-for="student in selectedSectionDetails.unassignedStudents"
+                :key="student.id"
+                class="summary-item"
+              >
+                <strong>{{ student.displayName }}</strong>
+                <span>{{ student.email }}</span>
+                <span>{{ statusLabel(student.status) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-card">
+          <div class="card-heading">
+            <h3>Rubric Used</h3>
+          </div>
+          <div v-if="!selectedSectionDetails.rubricUsed" class="empty-state compact">
+            No rubric details were found for this section.
+          </div>
+          <div v-else class="stack-gap-sm">
+            <div>
+              <p class="detail-label">Rubric name</p>
+              <strong>{{ selectedSectionDetails.rubricUsed.name }}</strong>
+            </div>
+            <div v-if="selectedSectionDetails.rubricUsed.criteria.length === 0" class="empty-state compact">
+              This rubric does not have any criteria yet.
+            </div>
+            <div v-else class="table-wrap">
+              <table class="report-table">
+                <thead>
+                  <tr>
+                    <th>Criterion</th>
+                    <th>Description</th>
+                    <th>Max score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="criterion in selectedSectionDetails.rubricUsed.criteria" :key="criterion.id">
+                    <td>{{ criterion.name }}</td>
+                    <td>{{ criterion.description }}</td>
+                    <td>{{ criterion.maxScore }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <div class="layout-grid">
       <section class="panel">
@@ -179,11 +339,14 @@ const sections = ref([])
 const instructors = ref([])
 const rubrics = ref([])
 const loading = ref(false)
+const isLoadingDetails = ref(false)
 const savingSection = ref(false)
 const message = ref('')
 const error = ref('')
 const searchName = ref('')
 const selectedSectionId = ref(null)
+const selectedSectionDetailsId = ref(null)
+const selectedSectionDetails = ref(null)
 const activeWeeksSection = ref(null)
 const weekForm = ref([])
 const sectionForm = reactive({
@@ -221,6 +384,10 @@ function activeCount(section) {
   return section.activeWeeks.filter((week) => week.active).length
 }
 
+function statusLabel(status) {
+  return status === 'INACTIVE' ? 'Deactivated' : status
+}
+
 function resetSectionForm() {
   selectedSectionId.value = null
   sectionForm.name = ''
@@ -242,6 +409,21 @@ function selectSection(section) {
 function prepareActiveWeeks(section) {
   activeWeeksSection.value = section
   weekForm.value = section.activeWeeks.map((week) => ({ ...week }))
+}
+
+async function openSectionDetails(sectionId) {
+  selectedSectionDetailsId.value = sectionId
+  isLoadingDetails.value = true
+  error.value = ''
+  try {
+    const result = await sectionsService.findById(sectionId)
+    selectedSectionDetails.value = result.data
+  } catch (err) {
+    error.value = err.message
+    selectedSectionDetails.value = null
+  } finally {
+    isLoadingDetails.value = false
+  }
 }
 
 function nextMonday(dateText) {
@@ -284,6 +466,7 @@ async function loadSections() {
     const result = await sectionsService.findAll(searchName.value)
     sections.value = result.data
     syncActiveWeeksSelection()
+    await syncSectionDetailsSelection()
   } catch (err) {
     error.value = err.message
   } finally {
@@ -357,6 +540,19 @@ function syncActiveWeeksSelection() {
 
   activeWeeksSection.value = refreshedSection
   weekForm.value = refreshedSection.activeWeeks.map((week) => ({ ...week }))
+}
+
+async function syncSectionDetailsSelection() {
+  if (!selectedSectionDetailsId.value) return
+
+  const stillExists = sections.value.some((section) => section.id === selectedSectionDetailsId.value)
+  if (!stillExists) {
+    selectedSectionDetailsId.value = null
+    selectedSectionDetails.value = null
+    return
+  }
+
+  await openSectionDetails(selectedSectionDetailsId.value)
 }
 
 function normalizeWeeksForSave() {
@@ -461,7 +657,8 @@ onMounted(loadAll)
 .page-heading,
 .button-row,
 .search-row,
-.week-row {
+.week-row,
+.card-heading {
   align-items: center;
   display: flex;
   gap: 0.75rem;
@@ -584,9 +781,75 @@ label {
   padding: 0;
 }
 
+.panel-heading,
+.section-heading,
+.stack-gap-lg,
+.stack-gap-sm,
+.summary-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.details-subgrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.detail-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.detail-label {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  margin: 0 0 0.25rem;
+  text-transform: uppercase;
+}
+
+.team-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.detail-card {
+  background: rgba(246, 249, 255, 0.92);
+  border: 1px solid rgba(208, 218, 230, 0.92);
+  border-radius: 22px;
+  padding: 1.1rem;
+}
+
+.card-heading {
+  justify-content: space-between;
+}
+
+.card-heading h3,
+.card-heading h4 {
+  margin: 0;
+}
+
+.summary-item {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(208, 218, 230, 0.8);
+  border-radius: 16px;
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem 0.95rem;
+}
+
+.summary-item span {
+  color: var(--text-muted);
+}
+
+.empty-state.compact {
+  padding: 0.75rem 0;
+}
+
 @media (max-width: 760px) {
   .layout-grid,
-  .two-column {
+  .two-column,
+  .details-subgrid,
+  .detail-grid {
     grid-template-columns: 1fr;
   }
 

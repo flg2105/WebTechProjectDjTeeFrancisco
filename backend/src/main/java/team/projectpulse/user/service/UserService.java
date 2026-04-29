@@ -1,18 +1,27 @@
 package team.projectpulse.user.service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
+import team.projectpulse.peereval.domain.PeerEvaluationEntry;
+import team.projectpulse.peereval.domain.PeerEvaluationSubmission;
+import team.projectpulse.peereval.repository.PeerEvaluationSubmissionRepository;
+import team.projectpulse.section.domain.ActiveWeek;
 import team.projectpulse.section.domain.Section;
+import team.projectpulse.section.repository.ActiveWeekRepository;
 import team.projectpulse.team.repository.TeamMembershipRepository;
 import team.projectpulse.team.domain.Team;
 import team.projectpulse.team.domain.TeamInstructorAssignment;
+import team.projectpulse.team.domain.TeamMembership;
 import team.projectpulse.team.repository.TeamInstructorAssignmentRepository;
 import team.projectpulse.team.repository.TeamRepository;
 import team.projectpulse.section.repository.SectionRepository;
@@ -31,10 +40,14 @@ import team.projectpulse.user.dto.InvitationRequest;
 import team.projectpulse.user.dto.InvitationResponse;
 import team.projectpulse.user.dto.SetupAccountRequest;
 import team.projectpulse.user.dto.StudentDetailsResponse;
+import team.projectpulse.user.dto.StudentPeerEvaluationSummaryResponse;
 import team.projectpulse.user.dto.StudentSearchResultResponse;
+import team.projectpulse.user.dto.StudentWarSummaryResponse;
 import team.projectpulse.user.dto.UserResponse;
 import team.projectpulse.user.repository.InvitationRepository;
 import team.projectpulse.user.repository.UserRepository;
+import team.projectpulse.war.domain.WarEntry;
+import team.projectpulse.war.repository.WarEntryRepository;
 
 @Service
 @Transactional(readOnly = true)
@@ -42,25 +55,34 @@ public class UserService {
   private final UserRepository userRepository;
   private final InvitationRepository invitationRepository;
   private final SectionRepository sectionRepository;
+  private final ActiveWeekRepository activeWeekRepository;
   private final TeamMembershipRepository teamMembershipRepository;
   private final TeamRepository teamRepository;
   private final TeamInstructorAssignmentRepository teamInstructorAssignmentRepository;
+  private final WarEntryRepository warEntryRepository;
+  private final PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository;
   private final PasswordEncoder passwordEncoder;
 
   public UserService(
       UserRepository userRepository,
       InvitationRepository invitationRepository,
       SectionRepository sectionRepository,
+      ActiveWeekRepository activeWeekRepository,
       TeamMembershipRepository teamMembershipRepository,
       TeamRepository teamRepository,
       TeamInstructorAssignmentRepository teamInstructorAssignmentRepository,
+      WarEntryRepository warEntryRepository,
+      PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository,
       PasswordEncoder passwordEncoder) {
     this.userRepository = userRepository;
     this.invitationRepository = invitationRepository;
     this.sectionRepository = sectionRepository;
+    this.activeWeekRepository = activeWeekRepository;
     this.teamMembershipRepository = teamMembershipRepository;
     this.teamRepository = teamRepository;
     this.teamInstructorAssignmentRepository = teamInstructorAssignmentRepository;
+    this.warEntryRepository = warEntryRepository;
+    this.peerEvaluationSubmissionRepository = peerEvaluationSubmissionRepository;
     this.passwordEncoder = passwordEncoder;
   }
 
@@ -136,10 +158,30 @@ public class UserService {
     return toStudentDetails(user);
   }
 
-  public List<InstructorSearchResultResponse> findInstructors(String q) {
-    String query = normalizeQuery(q);
-    return userRepository.searchByRole(UserRole.INSTRUCTOR, query).stream()
-        .map(this::toInstructorSearchResult)
+  public List<InstructorSearchResultResponse> findInstructors(
+      String firstName,
+      String lastName,
+      String teamName,
+      UserStatus status) {
+    String normalizedFirstName = normalizeQuery(firstName);
+    String normalizedLastName = normalizeQuery(lastName);
+    String normalizedTeamName = normalizeQuery(teamName);
+
+    return userRepository.findByRoleOrderByDisplayNameAsc(UserRole.INSTRUCTOR).stream()
+        .map(this::toInstructorSearchCandidate)
+        .filter(candidate -> matchesInstructorSearch(
+            candidate,
+            normalizedFirstName,
+            normalizedLastName,
+            normalizedTeamName,
+            status))
+        .sorted(Comparator
+            .comparingInt(InstructorSearchCandidate::latestAcademicYearStart)
+            .reversed()
+            .thenComparing(candidate -> sortText(candidate.nameParts().lastName()))
+            .thenComparing(candidate -> sortText(candidate.nameParts().firstName()))
+            .thenComparing(candidate -> sortText(candidate.user().getDisplayName())))
+        .map(InstructorSearchCandidate::response)
         .toList();
   }
 
@@ -261,37 +303,78 @@ public class UserService {
   }
 
   private StudentSearchResultResponse toStudentSearchResult(ProjectUser user) {
+    StudentPlacement placement = resolveStudentPlacement(user);
     return new StudentSearchResultResponse(
         user.getId(),
         user.getEmail(),
         user.getDisplayName(),
-        null,
-        null,
-        null,
-        null);
+        placement.sectionId(),
+        placement.teamId(),
+        placement.sectionName(),
+        placement.teamName());
   }
 
   private StudentDetailsResponse toStudentDetails(ProjectUser user) {
+    NameParts nameParts = splitName(user.getDisplayName());
+    StudentPlacement placement = resolveStudentPlacement(user);
+
+    List<WarEntry> warEntries = warEntryRepository.findByStudentUserIdOrderByActiveWeekIdDesc(user.getId());
+    Map<Long, ActiveWeek> activeWeeksById = activeWeekRepository.findAllById(
+        warEntries.stream().map(WarEntry::getActiveWeekId).distinct().toList()).stream()
+        .collect(Collectors.toMap(ActiveWeek::getId, Function.identity()));
+    Map<Long, Team> warTeamsById = teamRepository.findAllById(
+        warEntries.stream().map(WarEntry::getTeamId).distinct().toList()).stream()
+        .collect(Collectors.toMap(Team::getId, Function.identity()));
+
+    List<StudentWarSummaryResponse> wars = warEntries.stream()
+        .map(entry -> {
+          ActiveWeek activeWeek = activeWeeksById.get(entry.getActiveWeekId());
+          Team team = warTeamsById.get(entry.getTeamId());
+          return new StudentWarSummaryResponse(
+              entry.getId(),
+              entry.getActiveWeekId(),
+              activeWeek != null ? activeWeek.getWeekStartDate() : null,
+              entry.getTeamId(),
+              team != null ? team.getName() : "Team " + entry.getTeamId(),
+              entry.getSubmittedAt(),
+              entry.getActivities().size());
+        })
+        .toList();
+
+    List<PeerEvaluationSubmission> receivedSubmissions = peerEvaluationSubmissionRepository
+        .findDistinctByEntriesEvaluateeStudentUserIdOrderByWeekStartDateDesc(user.getId());
+    Map<Long, ProjectUser> evaluatorsById = userRepository.findAllById(receivedSubmissions.stream()
+        .map(PeerEvaluationSubmission::getEvaluatorStudentUserId)
+        .distinct()
+        .toList()).stream()
+        .collect(Collectors.toMap(ProjectUser::getId, Function.identity()));
+    Map<Long, Team> peerTeamsById = teamRepository.findAllById(receivedSubmissions.stream()
+        .map(PeerEvaluationSubmission::getTeamId)
+        .distinct()
+        .toList()).stream()
+        .collect(Collectors.toMap(Team::getId, Function.identity()));
+
+    List<StudentPeerEvaluationSummaryResponse> peerEvaluations = receivedSubmissions.stream()
+        .flatMap(submission -> submission.getEntries().stream()
+            .filter(entry -> Objects.equals(entry.getEvaluateeStudentUserId(), user.getId()))
+            .map(entry -> toPeerEvaluationSummary(entry, submission, evaluatorsById, peerTeamsById)))
+        .sorted(Comparator
+            .comparing(StudentPeerEvaluationSummaryResponse::weekStartDate, Comparator.nullsLast(Comparator.reverseOrder()))
+            .thenComparing(response -> sortText(response.evaluatorDisplayName())))
+        .toList();
+
     return new StudentDetailsResponse(
         user.getId(),
         user.getEmail(),
         user.getDisplayName(),
-        null,
-        null,
-        null,
-        null,
-        List.of(),
-        List.of());
-  }
-
-  private InstructorSearchResultResponse toInstructorSearchResult(ProjectUser user) {
-    return new InstructorSearchResultResponse(
-        user.getId(),
-        user.getEmail(),
-        user.getDisplayName(),
-        user.getStatus(),
-        null,
-        null);
+        nameParts.firstName(),
+        nameParts.lastName(),
+        placement.sectionId(),
+        placement.teamId(),
+        placement.sectionName(),
+        placement.teamName(),
+        wars,
+        peerEvaluations);
   }
 
   private InstructorDetailsResponse toInstructorDetails(ProjectUser user) {
@@ -356,6 +439,163 @@ public class UserService {
     return value == null ? "" : value.trim().toLowerCase();
   }
 
+  private InstructorSearchCandidate toInstructorSearchCandidate(ProjectUser user) {
+    NameParts nameParts = splitName(user.getDisplayName());
+
+    List<Long> teamIds = teamInstructorAssignmentRepository.findByInstructorUserIdOrderByTeamIdAsc(user.getId())
+        .stream()
+        .map(TeamInstructorAssignment::getTeamId)
+        .distinct()
+        .toList();
+
+    Map<Long, Team> teamsById = teamRepository.findAllById(teamIds).stream()
+        .collect(Collectors.toMap(Team::getId, Function.identity()));
+    List<Long> sectionIds = teamsById.values().stream()
+        .map(Team::getSectionId)
+        .distinct()
+        .toList();
+    Map<Long, Section> sectionsById = sectionRepository.findAllById(sectionIds).stream()
+        .collect(Collectors.toMap(Section::getId, Function.identity()));
+
+    List<InstructorSupervisedTeamResponse> supervisedTeams = teamIds.stream()
+        .map(teamsById::get)
+        .filter(Objects::nonNull)
+        .map(team -> {
+          Section section = sectionsById.get(team.getSectionId());
+          return new InstructorSupervisedTeamResponse(
+              team.getSectionId(),
+              section != null ? section.getName() : "Section " + team.getSectionId(),
+              team.getId(),
+              team.getName());
+        })
+        .sorted(Comparator
+            .comparing((InstructorSupervisedTeamResponse response) -> sortSectionAcademicYear(response.sectionId(), sectionsById))
+            .reversed()
+            .thenComparing(response -> sortText(response.sectionName()))
+            .thenComparing(response -> sortText(response.teamName())))
+        .toList();
+
+    int latestAcademicYearStart = supervisedTeams.stream()
+        .map(InstructorSupervisedTeamResponse::sectionId)
+        .map(sectionsById::get)
+        .filter(Objects::nonNull)
+        .map(Section::getAcademicYear)
+        .mapToInt(this::academicYearStart)
+        .max()
+        .orElse(-1);
+
+    InstructorSearchResultResponse response = new InstructorSearchResultResponse(
+        user.getId(),
+        user.getEmail(),
+        user.getDisplayName(),
+        nameParts.firstName(),
+        nameParts.lastName(),
+        user.getStatus(),
+        supervisedTeams);
+
+    return new InstructorSearchCandidate(user, nameParts, supervisedTeams, latestAcademicYearStart, response);
+  }
+
+  private boolean matchesInstructorSearch(
+      InstructorSearchCandidate candidate,
+      String firstName,
+      String lastName,
+      String teamName,
+      UserStatus status) {
+    if (status != null && candidate.user().getStatus() != status) {
+      return false;
+    }
+    if (firstName != null && !sortText(candidate.nameParts().firstName()).contains(sortText(firstName))) {
+      return false;
+    }
+    if (lastName != null && !sortText(candidate.nameParts().lastName()).contains(sortText(lastName))) {
+      return false;
+    }
+    if (teamName != null && candidate.supervisedTeams().stream()
+        .noneMatch(team -> sortText(team.teamName()).contains(sortText(teamName)))) {
+      return false;
+    }
+    return true;
+  }
+
+  private int academicYearStart(String academicYear) {
+    if (academicYear == null) {
+      return -1;
+    }
+    String trimmed = academicYear.trim();
+    if (trimmed.length() < 4) {
+      return -1;
+    }
+    try {
+      return Integer.parseInt(trimmed.substring(0, 4));
+    } catch (NumberFormatException ex) {
+      return -1;
+    }
+  }
+
+  private int sortSectionAcademicYear(Long sectionId, Map<Long, Section> sectionsById) {
+    Section section = sectionsById.get(sectionId);
+    return section == null ? -1 : academicYearStart(section.getAcademicYear());
+  }
+
+  private StudentPlacement resolveStudentPlacement(ProjectUser user) {
+    List<TeamMembership> memberships = teamMembershipRepository.findByStudentUserIdOrderByTeamIdAsc(user.getId());
+    if (!memberships.isEmpty()) {
+      Long teamId = memberships.get(0).getTeamId();
+      Team team = teamRepository.findById(teamId).orElse(null);
+      if (team != null) {
+        Section section = sectionRepository.findById(team.getSectionId()).orElse(null);
+        return new StudentPlacement(
+            team.getSectionId(),
+            section != null ? section.getName() : "Section " + team.getSectionId(),
+            team.getId(),
+            team.getName());
+      }
+    }
+
+    return invitationRepository.findFirstByEmailIgnoreCaseAndRole(user.getEmail(), UserRole.STUDENT)
+        .filter(invitation -> invitation.getSectionId() != null)
+        .map(invitation -> {
+          Section section = sectionRepository.findById(invitation.getSectionId()).orElse(null);
+          return new StudentPlacement(
+              invitation.getSectionId(),
+              section != null ? section.getName() : "Section " + invitation.getSectionId(),
+              null,
+              null);
+        })
+        .orElseGet(() -> new StudentPlacement(null, null, null, null));
+  }
+
+  private StudentPeerEvaluationSummaryResponse toPeerEvaluationSummary(
+      PeerEvaluationEntry entry,
+      PeerEvaluationSubmission submission,
+      Map<Long, ProjectUser> evaluatorsById,
+      Map<Long, Team> teamsById) {
+    ProjectUser evaluator = evaluatorsById.get(submission.getEvaluatorStudentUserId());
+    Team team = teamsById.get(submission.getTeamId());
+    return new StudentPeerEvaluationSummaryResponse(
+        entry.getId(),
+        submission.getId(),
+        submission.getWeekStartDate(),
+        submission.getEvaluatorStudentUserId(),
+        evaluator != null ? evaluator.getDisplayName() : "Student " + submission.getEvaluatorStudentUserId(),
+        submission.getTeamId(),
+        team != null ? team.getName() : "Team " + submission.getTeamId(),
+        averageScore(entry),
+        entry.getPublicComment(),
+        entry.getPrivateComment());
+  }
+
+  private BigDecimal averageScore(PeerEvaluationEntry entry) {
+    if (entry.getScores().isEmpty()) {
+      return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+    }
+    BigDecimal total = entry.getScores().stream()
+        .map(score -> score.getScore())
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+    return total.divide(BigDecimal.valueOf(entry.getScores().size()), 2, RoundingMode.HALF_UP);
+  }
+
   private UserResponse toResponse(ProjectUser user) {
     return new UserResponse(
         user.getId(),
@@ -368,4 +608,17 @@ public class UserService {
   }
 
   private record NameParts(String firstName, String lastName) {}
+
+  private record StudentPlacement(
+      Long sectionId,
+      String sectionName,
+      Long teamId,
+      String teamName) {}
+
+  private record InstructorSearchCandidate(
+      ProjectUser user,
+      NameParts nameParts,
+      List<InstructorSupervisedTeamResponse> supervisedTeams,
+      int latestAcademicYearStart,
+      InstructorSearchResultResponse response) {}
 }

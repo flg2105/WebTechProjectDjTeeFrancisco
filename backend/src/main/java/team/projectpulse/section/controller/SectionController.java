@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import team.projectpulse.section.dto.ActiveWeekRequest;
 import team.projectpulse.section.dto.AssignSectionInstructorsRequest;
+import team.projectpulse.section.dto.SectionDetailsResponse;
 import team.projectpulse.section.dto.SectionRequest;
 import team.projectpulse.section.dto.SectionResponse;
 import team.projectpulse.section.service.SectionService;
@@ -35,8 +36,8 @@ public class SectionController {
   }
 
   @GetMapping("/{id}")
-  @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
-  public Result<SectionResponse> findById(@PathVariable Long id) {
+  @PreAuthorize("hasRole('ADMIN')")
+  public Result<SectionDetailsResponse> findById(@PathVariable Long id) {
     return Result.ok("Find Section Success", sectionService.findById(id));
   }
 

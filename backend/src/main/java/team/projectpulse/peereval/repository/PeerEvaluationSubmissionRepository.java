@@ -11,4 +11,6 @@ public interface PeerEvaluationSubmissionRepository extends JpaRepository<PeerEv
   List<PeerEvaluationSubmission> findByTeamIdAndWeekStartDate(Long teamId, LocalDate weekStartDate);
 
   List<PeerEvaluationSubmission> findBySectionIdAndWeekStartDate(Long sectionId, LocalDate weekStartDate);
+
+  List<PeerEvaluationSubmission> findDistinctByEntriesEvaluateeStudentUserIdOrderByWeekStartDateDesc(Long evaluateeStudentUserId);
 }
