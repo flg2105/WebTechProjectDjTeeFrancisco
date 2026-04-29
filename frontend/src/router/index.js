@@ -5,6 +5,7 @@ import HomeView from '../features/home/HomeView.vue'
 import LoginView from '../features/auth/LoginView.vue'
 import SectionsView from '../features/sections/SectionsView.vue'
 import InstructorsView from '../features/instructors/InstructorsView.vue'
+import StudentsView from '../features/students/StudentsView.vue'
 import TeamsView from '../features/teams/TeamsView.vue'
 import RubricsView from '../features/rubrics/RubricsView.vue'
 import WarView from '../features/war/WarView.vue'
@@ -16,6 +17,7 @@ const routes = [
   { path: '/', name: 'home', component: HomeView },
   { path: '/sections', name: 'sections', component: SectionsView },
   { path: '/instructors', name: 'instructors', component: InstructorsView, meta: { roles: ['ADMIN'] } },
+  { path: '/students', name: 'students', component: StudentsView, meta: { roles: ['ADMIN', 'INSTRUCTOR'] } },
   { path: '/teams', name: 'teams', component: TeamsView },
   { path: '/rubrics', name: 'rubrics', component: RubricsView },
   { path: '/war', name: 'war', component: WarView },
