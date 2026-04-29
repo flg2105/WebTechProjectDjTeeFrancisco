@@ -17,6 +17,7 @@ import team.projectpulse.system.Result;
 import team.projectpulse.war.dto.WarActivityRequest;
 import team.projectpulse.war.dto.WarEntryResponse;
 import team.projectpulse.war.dto.WarStudentReportResponse;
+import team.projectpulse.war.dto.WarTeamReportResponse;
 import team.projectpulse.war.service.WarService;
 
 @Validated
@@ -46,6 +47,16 @@ public class WarController {
     return Result.ok(
         "Find Student WAR Report Success",
         warService.findStudentReport(studentUserId, startActiveWeekId, endActiveWeekId));
+  }
+
+  @GetMapping("/team-report")
+  @PreAuthorize("hasRole('INSTRUCTOR')")
+  public Result<WarTeamReportResponse> findTeamReport(
+      @RequestParam @Positive Long teamId,
+      @RequestParam @Positive Long activeWeekId) {
+    return Result.ok(
+        "Find Team WAR Report Success",
+        warService.findTeamReport(teamId, activeWeekId));
   }
 
   @PostMapping("/activities")

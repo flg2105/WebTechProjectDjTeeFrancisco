@@ -39,7 +39,7 @@ Notes:
 - `GET /api/instructors` exists, but there is no instructor “details” read and no status transition endpoint.
 
 ### Reporting (missing / partially covered)
-- [ ] UC-32: Instructor/Student generates a WAR report of a senior design team (`requirements/3_Use_Cases.md`)
+- [x] UC-32: Instructor/Student generates a WAR report of a senior design team (`requirements/3_Use_Cases.md`)
 - [ ] UC-31..UC-34: confirm all instructor reporting requirements are met and consistent with the report UIs planned in `docs/team-phase-plan.md`
 
 Notes:
