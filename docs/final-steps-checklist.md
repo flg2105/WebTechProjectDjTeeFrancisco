@@ -48,7 +48,7 @@ Notes:
 
 ### “View details” completeness (partial)
 - [x] UC-3: View a senior design section — ensure the section details view matches required contents (teams, members, instructors, unassigned lists, rubric) (`requirements/3_Use_Cases.md`)
-- [ ] UC-16: View a student — ensure `StudentDetailsResponse` is populated with the required details (`requirements/3_Use_Cases.md`)
+- [x] UC-16: View a student — ensure `StudentDetailsResponse` is populated with the required details (`requirements/3_Use_Cases.md`)
 - [x] UC-21: Find instructors — ensure results include any required associations (team assignment fields are currently blank) (`requirements/3_Use_Cases.md`)
 
 ---
