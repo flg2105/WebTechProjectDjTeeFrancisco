@@ -1,6 +1,7 @@
 package team.projectpulse.admin;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -134,6 +135,45 @@ class AdminSetupFlowIntegrationTest {
         .andExpect(jsonPath("$.data.users[0].status").value("INVITED"));
   }
 
+  @Test
+  void should_ViewSectionDetails_WithTeamsAssignmentsUnassignedListsAndRubric() throws Exception {
+    Long rubricId = createRubricWithName("Peer Eval Rubric Section Details Test");
+    Long sectionId = createSectionWithName(rubricId, "Section Details Section");
+    createActiveWeeks(sectionId);
+
+    Long assignedStudentId = setupStudentWithEmail("assigned.student@example.edu", "Assigned Student");
+    Long unassignedStudentId = setupStudentWithEmail("unassigned.student@example.edu", "Unassigned Student");
+    inviteStudentToSection(sectionId, "assigned.student@example.edu");
+    inviteStudentToSection(sectionId, "unassigned.student@example.edu");
+
+    Long teamInstructorId = setupInstructorWithEmail("team.instructor@example.edu", "Team Instructor");
+    Long sectionOnlyInstructorId = setupInstructorWithEmail("section.only.instructor@example.edu", "Section Only Instructor");
+
+    assignInstructorToSection(sectionId, teamInstructorId, sectionOnlyInstructorId);
+
+    Long teamId = createTeamWithName(sectionId, "Section Details Team");
+    assignStudentToTeam(teamId, assignedStudentId);
+    assignInstructorToTeam(teamId, teamInstructorId);
+
+    mvc.perform(get("/api/sections/" + sectionId).with(admin()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.name").value("Section Details Section"))
+        .andExpect(jsonPath("$.data.teams.length()").value(1))
+        .andExpect(jsonPath("$.data.teams[0].name").value("Section Details Team"))
+        .andExpect(jsonPath("$.data.teams[0].members.length()").value(1))
+        .andExpect(jsonPath("$.data.teams[0].members[0].id").value(assignedStudentId))
+        .andExpect(jsonPath("$.data.teams[0].instructors.length()").value(1))
+        .andExpect(jsonPath("$.data.teams[0].instructors[0].id").value(teamInstructorId))
+        .andExpect(jsonPath("$.data.unassignedStudents.length()").value(1))
+        .andExpect(jsonPath("$.data.unassignedStudents[0].id").value(unassignedStudentId))
+        .andExpect(jsonPath("$.data.unassignedInstructors.length()").value(1))
+        .andExpect(jsonPath("$.data.unassignedInstructors[0].id").value(sectionOnlyInstructorId))
+        .andExpect(jsonPath("$.data.rubricUsed.id").value(rubricId))
+        .andExpect(jsonPath("$.data.rubricUsed.criteria.length()").value(1));
+  }
+
   private Long createRubric() throws Exception {
     return createRubricWithName("Peer Eval Rubric Phase 2 Test");
   }
@@ -164,6 +204,24 @@ class AdminSetupFlowIntegrationTest {
 
   private Long createSection(Long rubricId) throws Exception {
     return createSectionWithName(rubricId, "Phase 2 Section");
+  }
+
+  private Long createTeamWithName(Long sectionId, String name) throws Exception {
+    MvcResult result = mvc.perform(post("/api/teams")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "sectionId": %d,
+                  "name": "%s"
+                }
+                """.formatted(sectionId, name)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andReturn();
+
+    return readId(result);
   }
 
   private Long createSectionWithName(Long rubricId, String name) throws Exception {
@@ -204,15 +262,19 @@ class AdminSetupFlowIntegrationTest {
   }
 
   private Long setupStudent() throws Exception {
+    return setupStudentWithEmail("phase2.student@example.edu", "Phase Two Student");
+  }
+
+  private Long setupStudentWithEmail(String email, String displayName) throws Exception {
     MvcResult result = mvc.perform(post("/api/users/student-setup")
             .contentType(MediaType.APPLICATION_JSON)
             .content("""
                 {
-                  "email": "phase2.student@example.edu",
-                  "displayName": "Phase Two Student",
+                  "email": "%s",
+                  "displayName": "%s",
                   "password": "projectpulse123"
                 }
-                """))
+                """.formatted(email, displayName)))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.flag").value(true))
         .andExpect(jsonPath("$.code").value(SUCCESS))
@@ -220,6 +282,86 @@ class AdminSetupFlowIntegrationTest {
         .andReturn();
 
     return readId(result);
+  }
+
+  private Long setupInstructorWithEmail(String email, String displayName) throws Exception {
+    MvcResult result = mvc.perform(post("/api/users/instructor-setup")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "email": "%s",
+                  "displayName": "%s",
+                  "password": "projectpulse123"
+                }
+                """.formatted(email, displayName)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.role").value("INSTRUCTOR"))
+        .andReturn();
+
+    return readId(result);
+  }
+
+  private void inviteStudentToSection(Long sectionId, String email) throws Exception {
+    mvc.perform(post("/api/invitations/students")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "sectionId": %d,
+                  "emails": ["%s"]
+                }
+                """.formatted(sectionId, email)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
+  }
+
+  private void assignInstructorToSection(Long sectionId, Long... instructorUserIds) throws Exception {
+    String ids = java.util.Arrays.stream(instructorUserIds)
+        .map(String::valueOf)
+        .collect(java.util.stream.Collectors.joining(","));
+
+    mvc.perform(post("/api/sections/" + sectionId + "/instructors")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "instructorUserIds": [%s]
+                }
+                """.formatted(ids)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
+  }
+
+  private void assignInstructorToTeam(Long teamId, Long instructorUserId) throws Exception {
+    mvc.perform(post("/api/teams/" + teamId + "/instructors")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "instructorUserIds": [%d]
+                }
+                """.formatted(instructorUserId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
+  }
+
+  private void assignStudentToTeam(Long teamId, Long studentUserId) throws Exception {
+    mvc.perform(post("/api/teams/" + teamId + "/students")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "studentUserId": %d
+                }
+                """.formatted(studentUserId)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
   }
 
   private Long createTeam(Long sectionId) throws Exception {
