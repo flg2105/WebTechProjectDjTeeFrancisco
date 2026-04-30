@@ -1,7 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { authSession } from '../shared/services/authSession'
 
-import HomeView from '../features/home/HomeView.vue'
+import HomeGateView from '../features/home/HomeGateView.vue'
+import AdminHomeView from '../features/home/AdminHomeView.vue'
+import InstructorHomeView from '../features/home/InstructorHomeView.vue'
+import StudentHomeView from '../features/home/StudentHomeView.vue'
 import LoginView from '../features/auth/LoginView.vue'
 import SectionsView from '../features/sections/SectionsView.vue'
 import InstructorsView from '../features/instructors/InstructorsView.vue'
@@ -14,15 +17,18 @@ import ReportsView from '../features/reports/ReportsView.vue'
 
 const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
-  { path: '/', name: 'home', component: HomeView },
-  { path: '/sections', name: 'sections', component: SectionsView },
+  { path: '/', name: 'home', component: HomeGateView },
+  { path: '/home/admin', name: 'adminHome', component: AdminHomeView, meta: { roles: ['ADMIN'] } },
+  { path: '/home/instructor', name: 'instructorHome', component: InstructorHomeView, meta: { roles: ['INSTRUCTOR'] } },
+  { path: '/home/student', name: 'studentHome', component: StudentHomeView, meta: { roles: ['STUDENT'] } },
+  { path: '/sections', name: 'sections', component: SectionsView, meta: { roles: ['ADMIN'] } },
   { path: '/instructors', name: 'instructors', component: InstructorsView, meta: { roles: ['ADMIN'] } },
   { path: '/students', name: 'students', component: StudentsView, meta: { roles: ['ADMIN', 'INSTRUCTOR'] } },
-  { path: '/teams', name: 'teams', component: TeamsView },
-  { path: '/rubrics', name: 'rubrics', component: RubricsView },
-  { path: '/war', name: 'war', component: WarView },
-  { path: '/peer-eval', name: 'peerEval', component: PeerEvalView },
-  { path: '/reports', name: 'reports', component: ReportsView }
+  { path: '/teams', name: 'teams', component: TeamsView, meta: { roles: ['ADMIN', 'INSTRUCTOR'] } },
+  { path: '/rubrics', name: 'rubrics', component: RubricsView, meta: { roles: ['ADMIN'] } },
+  { path: '/war', name: 'war', component: WarView, meta: { roles: ['STUDENT', 'INSTRUCTOR'] } },
+  { path: '/peer-eval', name: 'peerEval', component: PeerEvalView, meta: { roles: ['STUDENT', 'INSTRUCTOR'] } },
+  { path: '/reports', name: 'reports', component: ReportsView, meta: { roles: ['INSTRUCTOR'] } }
 ]
 
 const router = createRouter({

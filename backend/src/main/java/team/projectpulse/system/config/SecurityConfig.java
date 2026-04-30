@@ -54,7 +54,6 @@ public class SecurityConfig {
         .authorizeHttpRequests(authorize -> authorize
             .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers(
-                "/api/health",
                 "/error",
                 "/api/auth/login",
                 "/api/users/student-setup",
@@ -81,7 +80,6 @@ public class SecurityConfig {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
       return new AntPathRequestMatcher("/api/auth/login").matches(request)
-          || new AntPathRequestMatcher("/api/health").matches(request)
           || new AntPathRequestMatcher("/error").matches(request);
     }
 

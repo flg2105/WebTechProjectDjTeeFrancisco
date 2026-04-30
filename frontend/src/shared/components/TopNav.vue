@@ -55,7 +55,20 @@ const navItems = [
 
 const visibleNavItems = computed(() => {
   const role = authSession.currentUser?.role
-  return navItems.filter((item) => !role || item.roles.includes(role))
+  const homePathByRole = {
+    ADMIN: '/home/admin',
+    INSTRUCTOR: '/home/instructor',
+    STUDENT: '/home/student'
+  }
+
+  return navItems
+    .filter((item) => !role || item.roles.includes(role))
+    .map((item) => {
+      if (!item.home) {
+        return item
+      }
+      return { ...item, to: homePathByRole[role] || '/' }
+    })
 })
 
 async function signOut() {

@@ -34,7 +34,7 @@ class ApiErrorWrappingIntegrationTest {
 
   @Test
   void should_ReturnResultWrapper_When_MethodNotAllowed() throws Exception {
-    mvc.perform(post("/api/health"))
+    mvc.perform(post("/api/health").with(user()))
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.flag").value(false))
         .andExpect(jsonPath("$.code").value(StatusCode.INVALID_ARGUMENT))
