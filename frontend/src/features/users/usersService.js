@@ -6,6 +6,7 @@ export const usersService = {
   findAll: (role = '') => apiClient.get(`${usersBasePath}${role ? `?role=${role}` : ''}`),
   findStudents: (q = '') => apiClient.get(`/api/students${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   viewStudent: (id) => apiClient.get(`/api/students/${Number(id)}`),
+  deleteStudent: (id) => apiClient.del(`/api/students/${Number(id)}`),
   findInstructors: ({ firstName = '', lastName = '', teamName = '', status = '' } = {}) => {
     const params = new URLSearchParams()
     if (firstName) params.set('firstName', firstName)
