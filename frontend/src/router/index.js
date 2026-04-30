@@ -14,10 +14,12 @@ import RubricsView from '../features/rubrics/RubricsView.vue'
 import WarView from '../features/war/WarView.vue'
 import PeerEvalView from '../features/peereval/PeerEvalView.vue'
 import ReportsView from '../features/reports/ReportsView.vue'
+import ForbiddenView from '../features/system/ForbiddenView.vue'
 
 const routes = [
   { path: '/login', name: 'login', component: LoginView, meta: { public: true } },
   { path: '/', name: 'home', component: HomeGateView },
+  { path: '/forbidden', name: 'forbidden', component: ForbiddenView, meta: { public: true } },
   { path: '/home/admin', name: 'adminHome', component: AdminHomeView, meta: { roles: ['ADMIN'] } },
   { path: '/home/instructor', name: 'instructorHome', component: InstructorHomeView, meta: { roles: ['INSTRUCTOR'] } },
   { path: '/home/student', name: 'studentHome', component: StudentHomeView, meta: { roles: ['STUDENT'] } },
@@ -26,8 +28,8 @@ const routes = [
   { path: '/students', name: 'students', component: StudentsView, meta: { roles: ['ADMIN', 'INSTRUCTOR'] } },
   { path: '/teams', name: 'teams', component: TeamsView, meta: { roles: ['ADMIN', 'INSTRUCTOR'] } },
   { path: '/rubrics', name: 'rubrics', component: RubricsView, meta: { roles: ['ADMIN'] } },
-  { path: '/war', name: 'war', component: WarView, meta: { roles: ['STUDENT', 'INSTRUCTOR'] } },
-  { path: '/peer-eval', name: 'peerEval', component: PeerEvalView, meta: { roles: ['STUDENT', 'INSTRUCTOR'] } },
+  { path: '/war', name: 'war', component: WarView, meta: { roles: ['STUDENT'] } },
+  { path: '/peer-eval', name: 'peerEval', component: PeerEvalView, meta: { roles: ['STUDENT'] } },
   { path: '/reports', name: 'reports', component: ReportsView, meta: { roles: ['INSTRUCTOR'] } }
 ]
 
@@ -53,7 +55,7 @@ router.beforeEach(async (to) => {
       await authSession.refreshCurrentUser()
     }
     if (to.meta.roles && !to.meta.roles.includes(authSession.currentUser?.role)) {
-      return { path: '/' }
+      return { path: '/forbidden', query: { from: to.fullPath } }
     }
     return true
   } catch {

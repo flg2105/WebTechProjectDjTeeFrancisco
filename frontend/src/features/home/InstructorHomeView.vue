@@ -43,9 +43,6 @@ import { RouterLink } from 'vue-router'
 const quickLinks = [
   { to: '/teams', label: 'Teams', kicker: 'Rosters', description: 'View teams and student assignments.' },
   { to: '/students', label: 'Students', kicker: 'Profiles', description: 'Find students and review participation.' },
-  { to: '/war', label: 'WAR', kicker: 'Weekly', description: 'Generate and review weekly activity reports.' },
-  { to: '/peer-eval', label: 'Peer Eval', kicker: 'Scoring', description: 'Review student submissions and reports.' },
-  { to: '/reports', label: 'Reports', kicker: 'Export', description: 'Generate section-level reporting exports.' }
+  { to: '/reports', label: 'Reports', kicker: 'WAR + Peer Eval', description: 'Generate WAR and peer-evaluation reports.' }
 ]
 </script>
-

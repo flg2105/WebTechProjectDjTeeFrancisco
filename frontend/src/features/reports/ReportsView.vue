@@ -341,7 +341,7 @@ async function loadContext() {
     const [sectionsResult, teamsResult, studentsResult] = await Promise.all([
       sectionsService.findAll(),
       teamsService.findAll(),
-      usersService.findAll('STUDENT')
+      usersService.findStudents()
     ])
     sections.value = sectionsResult.data || []
     teams.value = teamsResult.data || []
@@ -525,4 +525,3 @@ label {
   }
 }
 </style>
-

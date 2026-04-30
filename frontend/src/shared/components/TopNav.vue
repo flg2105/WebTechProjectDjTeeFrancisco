@@ -43,13 +43,13 @@ const router = useRouter()
 
 const navItems = [
   { to: '/', label: 'Home', caption: 'Project overview', icon: 'H', roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT'] },
-  { to: '/sections', label: 'Sections', caption: 'Schedules and invites', icon: 'S', roles: ['ADMIN', 'INSTRUCTOR'] },
+  { to: '/sections', label: 'Sections', caption: 'Schedules and invites', icon: 'S', roles: ['ADMIN'] },
   { to: '/instructors', label: 'Instructors', caption: 'Accounts and status', icon: 'I', roles: ['ADMIN'] },
   { to: '/students', label: 'Students', caption: 'Profiles and history', icon: 'U', roles: ['ADMIN', 'INSTRUCTOR'] },
   { to: '/teams', label: 'Teams', caption: 'Assignments and rosters', icon: 'T', roles: ['ADMIN', 'INSTRUCTOR'] },
   { to: '/rubrics', label: 'Rubrics', caption: 'Scoring frameworks', icon: 'R', roles: ['ADMIN'] },
-  { to: '/war', label: 'WAR', caption: 'Weekly activity reports', icon: 'W', roles: ['STUDENT', 'INSTRUCTOR'] },
-  { to: '/peer-eval', label: 'Peer Eval', caption: 'Submissions and reports', icon: 'P', roles: ['STUDENT', 'INSTRUCTOR'] },
+  { to: '/war', label: 'WAR', caption: 'Weekly activity reports', icon: 'W', roles: ['STUDENT'] },
+  { to: '/peer-eval', label: 'Peer Eval', caption: 'Submissions and reports', icon: 'P', roles: ['STUDENT'] },
   { to: '/reports', label: 'Reports', caption: 'Instructor reporting', icon: 'R', roles: ['INSTRUCTOR'] }
 ]
 
