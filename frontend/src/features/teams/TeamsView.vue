@@ -35,21 +35,6 @@
           <button class="text-button" type="button" @click="resetTeamForm">New</button>
         </div>
       </form>
-
-      <section class="panel">
-        <h2>Student Setup</h2>
-        <form class="setup-form" @submit.prevent="setupStudent">
-          <label>
-            Display name
-            <input v-model="studentForm.displayName" required placeholder="Jane Student" />
-          </label>
-          <label>
-            Email
-            <input v-model="studentForm.email" required type="email" placeholder="student@tcu.edu" />
-          </label>
-          <button class="text-button" type="submit">Create Student Account</button>
-        </form>
-      </section>
     </div>
 
     <div class="panel">
@@ -177,7 +162,6 @@ const sectionFilter = ref('')
 const assignmentStudentId = ref('')
 const assignmentInstructorId = ref('')
 const teamForm = reactive({ sectionId: '', name: '' })
-const studentForm = reactive({ displayName: '', email: '' })
 const availableStudents = computed(() => {
   if (!selectedAssignmentTeam.value) {
     return students.value
@@ -291,20 +275,6 @@ async function deleteTeam(team) {
     await teamsService.remove(team.id)
     message.value = 'Team deleted.'
     await loadTeams()
-  } catch (err) {
-    error.value = err.message
-  }
-}
-
-async function setupStudent() {
-  error.value = ''
-  message.value = ''
-  try {
-    await usersService.setupStudent({ ...studentForm })
-    message.value = 'Student account created.'
-    studentForm.displayName = ''
-    studentForm.email = ''
-    await loadStudents()
   } catch (err) {
     error.value = err.message
   }
