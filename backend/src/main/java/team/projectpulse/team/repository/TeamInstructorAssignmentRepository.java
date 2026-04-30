@@ -13,5 +13,7 @@ public interface TeamInstructorAssignmentRepository extends JpaRepository<TeamIn
 
   List<TeamInstructorAssignment> findByTeamIdOrderByInstructorUserIdAsc(Long teamId);
 
+  void deleteByTeamId(Long teamId);
+
   void deleteByTeamIdAndInstructorUserId(Long teamId, Long instructorUserId);
 }

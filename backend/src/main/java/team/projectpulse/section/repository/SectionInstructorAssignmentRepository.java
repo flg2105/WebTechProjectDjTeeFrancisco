@@ -9,6 +9,7 @@ public interface SectionInstructorAssignmentRepository extends JpaRepository<Sec
 
   List<SectionInstructorAssignment> findBySectionIdOrderByInstructorUserIdAsc(Long sectionId);
 
+  void deleteBySectionId(Long sectionId);
+
   void deleteBySectionIdAndInstructorUserId(Long sectionId, Long instructorUserId);
 }
-

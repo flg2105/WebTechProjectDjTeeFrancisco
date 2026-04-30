@@ -13,5 +13,7 @@ public interface InvitationRepository extends JpaRepository<Invitation, Long> {
 
   Optional<Invitation> findFirstByEmailIgnoreCaseAndRole(String email, UserRole role);
 
+  void deleteBySectionId(Long sectionId);
+
   void deleteByEmailIgnoreCaseAndRole(String email, UserRole role);
 }

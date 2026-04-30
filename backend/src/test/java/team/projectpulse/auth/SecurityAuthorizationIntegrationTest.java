@@ -1,6 +1,7 @@
 package team.projectpulse.auth;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -80,6 +81,69 @@ class SecurityAuthorizationIntegrationTest {
         .andExpect(jsonPath("$.code").value(SUCCESS));
   }
 
+  @Test
+  void should_AllowInstructorToDeleteSection() throws Exception {
+    Long sectionId = createSectionForAuthorization();
+
+    mvc.perform(delete("/api/sections/" + sectionId)
+            .with(instructor()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
+  }
+
+  @Test
+  void should_ReturnForbidden_When_StudentDeletesSection() throws Exception {
+    Long sectionId = createSectionForAuthorization();
+
+    mvc.perform(delete("/api/sections/" + sectionId)
+            .with(student("student.authz@example.edu")))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(FORBIDDEN));
+  }
+
+  private Long createSectionForAuthorization() throws Exception {
+    long unique = System.nanoTime();
+
+    MvcResult rubricResult = mvc.perform(post("/api/rubrics")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "name": "Authorization Section Rubric %d",
+                  "criteria": [
+                    {
+                      "name": "Quality of work",
+                      "description": "Rate quality of work.",
+                      "maxScore": 10
+                    }
+                  ]
+                }
+                """.formatted(unique)))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    Long rubricId = readId(rubricResult);
+
+    MvcResult sectionResult = mvc.perform(post("/api/sections")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "name": "Authorization Section %d",
+                  "academicYear": "2026-2027",
+                  "startDate": "2026-08-31",
+                  "endDate": "2027-04-30",
+                  "rubricId": %d
+                }
+                """.formatted(unique, rubricId)))
+        .andExpect(status().isOk())
+        .andReturn();
+
+    return readId(sectionResult);
+  }
+
   private Long setupStudent(String email, String displayName) throws Exception {
     MvcResult result = mvc.perform(post("/api/users/student-setup")
             .contentType(MediaType.APPLICATION_JSON)
@@ -98,6 +162,18 @@ class SecurityAuthorizationIntegrationTest {
     int start = body.indexOf(marker) + marker.length();
     int end = body.indexOf(",", start);
     return Long.valueOf(body.substring(start, end));
+  }
+
+  private Long readId(MvcResult result) throws Exception {
+    String body = result.getResponse().getContentAsString();
+    String marker = "\"id\":";
+    int start = body.indexOf(marker) + marker.length();
+    int end = body.indexOf(",", start);
+    return Long.valueOf(body.substring(start, end));
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
+    return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
   }
 
   private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor instructor() {
