@@ -13,65 +13,98 @@
     <p v-if="error" class="notice error">{{ error }}</p>
 
     <div class="layout-grid">
-      <section class="panel">
-        <div class="panel-heading">
-          <h2>Find Instructors</h2>
-        </div>
-
-        <form class="search-form" @submit.prevent="loadInstructors">
-          <div class="search-grid">
-            <input v-model.trim="searchForm.firstName" placeholder="First name" />
-            <input v-model.trim="searchForm.lastName" placeholder="Last name" />
-            <input v-model.trim="searchForm.teamName" placeholder="Team name" />
+      <div class="stack-gap-md">
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Create Instructor Account</h2>
           </div>
-          <div class="search-row">
-            <select v-model="searchForm.status">
-              <option value="">All statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Deactivated</option>
-              <option value="INVITED">Invited</option>
-            </select>
-            <button class="text-button" type="submit">Search</button>
-          </div>
-        </form>
 
-        <div v-if="isLoadingList" class="empty-state">Loading instructors...</div>
-        <div v-else-if="instructors.length === 0" class="empty-state">
-          No instructors match the current search.
-        </div>
-        <article
-          v-for="instructor in instructors"
-          v-else
-          :key="instructor.id"
-          :class="['list-item', { selected: selectedInstructorId === instructor.id }]"
-        >
-          <button class="list-select" type="button" @click="selectInstructor(instructor.id)">
-            <div class="stack-gap-sm">
-              <div>
-                <strong>{{ displayInstructorName(instructor) }}</strong>
-                <p>{{ instructor.email }}</p>
-                <p class="helper">
-                  {{ instructor.status === 'INACTIVE' ? 'Deactivated' : instructor.status }}
-                </p>
-              </div>
-              <div>
-                <p class="detail-label">Teams</p>
-                <p v-if="instructor.supervisedTeams.length === 0" class="helper mb-0">
-                  No supervised teams yet.
-                </p>
-                <div v-else class="result-team-list">
-                  <span v-for="team in instructor.supervisedTeams" :key="`${instructor.id}-${team.teamId}`" class="team-pill">
-                    {{ team.teamName }}
-                  </span>
+          <form class="account-form" @submit.prevent="createInstructor">
+            <label>
+              Display name
+              <input v-model.trim="createForm.displayName" required placeholder="Dr. Ada Lovelace" />
+            </label>
+            <label>
+              Email
+              <input v-model.trim="createForm.email" required type="email" placeholder="instructor@tcu.edu" />
+            </label>
+            <label>
+              Temporary password
+              <input
+                v-model="createForm.password"
+                autocomplete="new-password"
+                minlength="8"
+                required
+                type="password"
+                placeholder="At least 8 characters"
+              />
+            </label>
+            <button class="primary-button" type="submit" :disabled="isCreatingInstructor">
+              {{ isCreatingInstructor ? 'Creating...' : 'Create Instructor' }}
+            </button>
+          </form>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Find Instructors</h2>
+          </div>
+
+          <form class="search-form" @submit.prevent="loadInstructors">
+            <div class="search-grid">
+              <input v-model.trim="searchForm.firstName" placeholder="First name" />
+              <input v-model.trim="searchForm.lastName" placeholder="Last name" />
+              <input v-model.trim="searchForm.teamName" placeholder="Team name" />
+            </div>
+            <div class="search-row">
+              <select v-model="searchForm.status">
+                <option value="">All statuses</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Deactivated</option>
+                <option value="INVITED">Invited</option>
+              </select>
+              <button class="text-button" type="submit">Search</button>
+            </div>
+          </form>
+
+          <div v-if="isLoadingList" class="empty-state">Loading instructors...</div>
+          <div v-else-if="instructors.length === 0" class="empty-state">
+            No instructors match the current search.
+          </div>
+          <article
+            v-for="instructor in instructors"
+            v-else
+            :key="instructor.id"
+            :class="['list-item', { selected: selectedInstructorId === instructor.id }]"
+          >
+            <button class="list-select" type="button" @click="selectInstructor(instructor.id)">
+              <div class="stack-gap-sm">
+                <div>
+                  <strong>{{ displayInstructorName(instructor) }}</strong>
+                  <p>{{ instructor.email }}</p>
+                  <p class="helper">
+                    {{ instructor.status === 'INACTIVE' ? 'Deactivated' : instructor.status }}
+                  </p>
+                </div>
+                <div>
+                  <p class="detail-label">Teams</p>
+                  <p v-if="instructor.supervisedTeams.length === 0" class="helper mb-0">
+                    No supervised teams yet.
+                  </p>
+                  <div v-else class="result-team-list">
+                    <span v-for="team in instructor.supervisedTeams" :key="`${instructor.id}-${team.teamId}`" class="team-pill">
+                      {{ team.teamName }}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <span :class="['status-badge', instructor.status === 'ACTIVE' ? 'success' : 'neutral']">
-              {{ instructor.status === 'INACTIVE' ? 'Deactivated' : instructor.status }}
-            </span>
-          </button>
-        </article>
-      </section>
+              <span :class="['status-badge', instructor.status === 'ACTIVE' ? 'success' : 'neutral']">
+                {{ instructor.status === 'INACTIVE' ? 'Deactivated' : instructor.status }}
+              </span>
+            </button>
+          </article>
+        </section>
+      </div>
 
       <section class="panel detail-panel">
         <div class="panel-heading">
@@ -175,6 +208,11 @@ import { usersService } from '../users/usersService'
 const instructors = ref([])
 const selectedInstructor = ref(null)
 const selectedInstructorId = ref(null)
+const createForm = reactive({
+  displayName: '',
+  email: '',
+  password: ''
+})
 const searchForm = reactive({
   firstName: '',
   lastName: '',
@@ -184,6 +222,7 @@ const searchForm = reactive({
 const deactivationReason = ref('')
 const isLoadingList = ref(false)
 const isLoadingDetails = ref(false)
+const isCreatingInstructor = ref(false)
 const isSavingStatus = ref(false)
 const message = ref('')
 const error = ref('')
@@ -211,6 +250,26 @@ async function loadInstructors() {
     error.value = err.message
   } finally {
     isLoadingList.value = false
+  }
+}
+
+async function createInstructor() {
+  isCreatingInstructor.value = true
+  error.value = ''
+  message.value = ''
+  try {
+    const result = await usersService.createInstructor({ ...createForm })
+    message.value = 'Instructor account created.'
+    createForm.displayName = ''
+    createForm.email = ''
+    createForm.password = ''
+    selectedInstructorId.value = result.data.id
+    await loadInstructors()
+    await loadInstructorDetails(result.data.id)
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    isCreatingInstructor.value = false
   }
 }
 
@@ -290,8 +349,10 @@ function displayInstructorName(instructor) {
 <style scoped>
 .phase-page,
 .panel,
+.account-form,
 .status-actions,
 .search-form,
+.stack-gap-md,
 .stack-gap-sm {
   display: grid;
   gap: 1rem;
@@ -406,6 +467,11 @@ function displayInstructorName(instructor) {
 
 .mb-0 {
   margin-bottom: 0;
+}
+
+label {
+  display: grid;
+  gap: 0.45rem;
 }
 
 @media (max-width: 900px) {

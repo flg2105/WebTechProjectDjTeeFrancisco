@@ -141,6 +141,16 @@ public class UserService {
     return setupAccount(request, UserRole.INSTRUCTOR);
   }
 
+  @Transactional
+  public UserResponse createStudent(SetupAccountRequest request) {
+    return setupAccount(request, UserRole.STUDENT);
+  }
+
+  @Transactional
+  public UserResponse createInstructor(SetupAccountRequest request) {
+    return setupAccount(request, UserRole.INSTRUCTOR);
+  }
+
   public List<StudentSearchResultResponse> findStudents(String q) {
     String query = normalizeQuery(q);
     return userRepository.searchByRole(UserRole.STUDENT, query).stream()
@@ -271,6 +281,9 @@ public class UserService {
   private UserResponse setupAccount(SetupAccountRequest request, UserRole role) {
     String email = request.email().trim().toLowerCase();
     ProjectUser user = userRepository.findByEmailIgnoreCase(email).orElseGet(ProjectUser::new);
+    if (user.getRole() != null && user.getRole() != role) {
+      throw new ApiException(StatusCode.CONFLICT, "User already exists with email " + email);
+    }
     user.setEmail(email);
     user.setDisplayName(request.displayName().trim());
     user.setPasswordHash(passwordEncoder.encode(request.password()));
