@@ -31,9 +31,16 @@ jobs:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
         run: npm run build
 
+      - name: Prepare App Service package
+        run: |
+          rm -rf appservice-package
+          mkdir appservice-package
+          cp -R dist appservice-package/dist
+          cp server.js package.json package-lock.json appservice-package/
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
           publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
-          package: frontend
+          package: frontend/appservice-package
