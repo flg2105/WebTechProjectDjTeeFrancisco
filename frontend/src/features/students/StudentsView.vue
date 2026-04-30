@@ -10,40 +10,73 @@
     </div>
 
     <p v-if="error" class="notice error">{{ error }}</p>
+    <p v-if="message" class="notice success">{{ message }}</p>
 
     <div class="layout-grid">
-      <section class="panel">
-        <div class="panel-heading">
-          <h2>Find Students</h2>
-        </div>
+      <div class="stack-gap-md">
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Create Student Account</h2>
+          </div>
 
-        <form class="search-row" @submit.prevent="loadStudents">
-          <input v-model.trim="searchQuery" placeholder="Search by name or email" />
-          <button class="text-button" type="submit">Search</button>
-        </form>
+          <form class="setup-form" @submit.prevent="setupStudent">
+            <label>
+              Display name
+              <input v-model="studentForm.displayName" required placeholder="Jane Student" />
+            </label>
+            <label>
+              Email
+              <input v-model="studentForm.email" required type="email" placeholder="student@tcu.edu" />
+            </label>
+            <label>
+              Password
+              <input
+                v-model="studentForm.password"
+                required
+                type="password"
+                minlength="8"
+                placeholder="Minimum 8 characters"
+              />
+            </label>
+            <button class="text-button" type="submit" :disabled="isCreatingStudent">
+              {{ isCreatingStudent ? 'Creating...' : 'Create Student Account' }}
+            </button>
+          </form>
+        </section>
 
-        <div v-if="isLoadingList" class="empty-state">Loading students...</div>
-        <div v-else-if="students.length === 0" class="empty-state">No students match the current search.</div>
-        <article
-          v-for="student in students"
-          v-else
-          :key="student.id"
-          :class="['list-item', { selected: selectedStudentId === student.id }]"
-        >
-          <button class="list-select" type="button" @click="selectStudent(student.id)">
-            <div class="stack-gap-sm">
-              <div>
-                <strong>{{ student.displayName }}</strong>
-                <p>{{ student.email }}</p>
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Find Students</h2>
+          </div>
+
+          <form class="search-row" @submit.prevent="loadStudents">
+            <input v-model.trim="searchQuery" placeholder="Search by name or email" />
+            <button class="text-button" type="submit">Search</button>
+          </form>
+
+          <div v-if="isLoadingList" class="empty-state">Loading students...</div>
+          <div v-else-if="students.length === 0" class="empty-state">No students match the current search.</div>
+          <article
+            v-for="student in students"
+            v-else
+            :key="student.id"
+            :class="['list-item', { selected: selectedStudentId === student.id }]"
+          >
+            <button class="list-select" type="button" @click="selectStudent(student.id)">
+              <div class="stack-gap-sm">
+                <div>
+                  <strong>{{ student.displayName }}</strong>
+                  <p>{{ student.email }}</p>
+                </div>
+                <div class="helper-grid">
+                  <p class="helper">Section: {{ student.sectionName || 'Not assigned' }}</p>
+                  <p class="helper">Team: {{ student.teamName || 'Not assigned' }}</p>
+                </div>
               </div>
-              <div class="helper-grid">
-                <p class="helper">Section: {{ student.sectionName || 'Not assigned' }}</p>
-                <p class="helper">Team: {{ student.teamName || 'Not assigned' }}</p>
-              </div>
-            </div>
-          </button>
-        </article>
-      </section>
+            </button>
+          </article>
+        </section>
+      </div>
 
       <section class="panel detail-panel">
         <div class="panel-heading">
@@ -156,7 +189,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { usersService } from '../users/usersService'
 
 const students = ref([])
@@ -165,7 +198,10 @@ const selectedStudentId = ref(null)
 const searchQuery = ref('')
 const isLoadingList = ref(false)
 const isLoadingDetails = ref(false)
+const isCreatingStudent = ref(false)
 const error = ref('')
+const message = ref('')
+const studentForm = reactive({ displayName: '', email: '', password: '' })
 
 onMounted(loadAll)
 
@@ -179,6 +215,7 @@ async function loadAll() {
 async function loadStudents() {
   isLoadingList.value = true
   error.value = ''
+  message.value = ''
   try {
     const result = await usersService.findStudents(searchQuery.value)
     students.value = result.data || []
@@ -201,6 +238,7 @@ async function selectStudent(studentId) {
 async function loadStudentDetails(studentId) {
   isLoadingDetails.value = true
   error.value = ''
+  message.value = ''
   try {
     const result = await usersService.viewStudent(studentId)
     selectedStudent.value = result.data
@@ -209,6 +247,24 @@ async function loadStudentDetails(studentId) {
     selectedStudent.value = null
   } finally {
     isLoadingDetails.value = false
+  }
+}
+
+async function setupStudent() {
+  isCreatingStudent.value = true
+  error.value = ''
+  message.value = ''
+  try {
+    await usersService.setupStudent({ ...studentForm })
+    message.value = 'Student account created.'
+    studentForm.displayName = ''
+    studentForm.email = ''
+    studentForm.password = ''
+    await loadStudents()
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    isCreatingStudent.value = false
   }
 }
 
