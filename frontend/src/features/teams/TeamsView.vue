@@ -13,7 +13,7 @@
     <p v-if="error" class="notice error">{{ error }}</p>
 
     <div class="layout-grid">
-      <form class="panel" @submit.prevent="saveTeam">
+      <form v-if="isAdmin" class="panel" @submit.prevent="saveTeam">
         <h2>{{ selectedTeamId ? 'Edit Team' : 'Create Team' }}</h2>
         <label>
           Section
@@ -35,6 +35,32 @@
           <button class="text-button" type="button" @click="resetTeamForm">New</button>
         </div>
       </form>
+
+      <section class="panel">
+        <h2>Student Setup</h2>
+        <form class="setup-form" @submit.prevent="setupStudent">
+          <label>
+            Display name
+            <input v-model="studentForm.displayName" required placeholder="Jane Student" />
+          </label>
+          <label>
+            Email
+            <input v-model="studentForm.email" required type="email" placeholder="student@tcu.edu" />
+          </label>
+          <label>
+            Temporary password
+            <input
+              v-model="studentForm.password"
+              autocomplete="new-password"
+              minlength="8"
+              required
+              type="password"
+              placeholder="At least 8 characters"
+            />
+          </label>
+          <button class="text-button" type="submit">Create Student Account</button>
+        </form>
+      </section>
     </div>
 
     <div class="panel">
@@ -65,10 +91,10 @@
           <p v-if="team.instructorUserIds?.length">Instructor IDs: {{ team.instructorUserIds.join(', ') }}</p>
         </div>
         <div class="button-row">
-          <button class="text-button" type="button" @click="selectTeam(team)">Edit</button>
+          <button v-if="isAdmin" class="text-button" type="button" @click="selectTeam(team)">Edit</button>
           <button class="text-button" type="button" @click="selectedAssignmentTeam = team">Assign Students</button>
-          <button class="text-button" type="button" @click="selectedInstructorAssignmentTeam = team">Assign Instructors</button>
-          <button class="danger-button" type="button" @click="deleteTeam(team)">Delete</button>
+          <button v-if="isAdmin" class="text-button" type="button" @click="selectedInstructorAssignmentTeam = team">Assign Instructors</button>
+          <button v-if="isAdmin" class="danger-button" type="button" @click="deleteTeam(team)">Delete</button>
         </div>
       </article>
     </div>
@@ -97,16 +123,17 @@
             :key="studentId"
             class="student-chip"
             type="button"
-            title="Remove student from team"
+            :disabled="!isAdmin"
+            :title="isAdmin ? 'Remove student from team' : 'Assigned student'"
             @click="removeStudent(studentId)"
           >
-            {{ studentLabel(studentId) }} x
+            {{ studentLabel(studentId) }}{{ isAdmin ? ' x' : '' }}
           </button>
         </div>
       </form>
     </section>
 
-    <section class="panel">
+    <section v-if="isAdmin" class="panel">
       <h2>Assign Instructors</h2>
       <div v-if="!selectedInstructorAssignmentTeam" class="empty-state">Choose Assign Instructors on a team.</div>
       <form v-else class="assignment-form" @submit.prevent="assignInstructor">
@@ -143,6 +170,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { authSession } from '../../shared/services/authSession'
 import { sectionsService } from '../sections/sectionsService'
 import { usersService } from '../users/usersService'
 import { teamsService } from './teamsService'
@@ -162,6 +190,8 @@ const sectionFilter = ref('')
 const assignmentStudentId = ref('')
 const assignmentInstructorId = ref('')
 const teamForm = reactive({ sectionId: '', name: '' })
+const studentForm = reactive({ displayName: '', email: '', password: '' })
+const isAdmin = computed(() => authSession.currentUser?.role === 'ADMIN')
 const availableStudents = computed(() => {
   if (!selectedAssignmentTeam.value) {
     return students.value
@@ -232,11 +262,15 @@ async function loadSections() {
 }
 
 async function loadStudents() {
-  const result = await usersService.findAll('STUDENT')
+  const result = await usersService.findStudents()
   students.value = result.data
 }
 
 async function loadInstructors() {
+  if (!isAdmin.value) {
+    instructors.value = []
+    return
+  }
   const result = await usersService.findAll('INSTRUCTOR')
   instructors.value = result.data
 }
@@ -280,6 +314,21 @@ async function deleteTeam(team) {
   }
 }
 
+async function setupStudent() {
+  error.value = ''
+  message.value = ''
+  try {
+    await usersService.createStudent({ ...studentForm })
+    message.value = 'Student account created.'
+    studentForm.displayName = ''
+    studentForm.email = ''
+    studentForm.password = ''
+    await loadStudents()
+  } catch (err) {
+    error.value = err.message
+  }
+}
+
 async function assignStudent() {
   error.value = ''
   message.value = ''
@@ -298,6 +347,9 @@ async function assignStudent() {
 }
 
 async function removeStudent(studentId) {
+  if (!isAdmin.value) {
+    return
+  }
   error.value = ''
   message.value = ''
   try {

@@ -60,7 +60,7 @@ public class TeamController {
   }
 
   @PostMapping("/{id}/students")
-  @PreAuthorize("hasRole('ADMIN')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
   public Result<TeamResponse> assignStudent(@PathVariable Long id, @Valid @RequestBody AssignStudentRequest request) {
     return Result.ok("Assign Student Success", teamService.assignStudent(id, request));
   }
@@ -72,6 +72,7 @@ public class TeamController {
   }
 
   @PostMapping("/{id}/instructors")
+  @PreAuthorize("hasRole('ADMIN')")
   public Result<TeamResponse> assignInstructors(
       @PathVariable Long id,
       @Valid @RequestBody AssignInstructorsRequest request) {
@@ -79,6 +80,7 @@ public class TeamController {
   }
 
   @DeleteMapping("/{id}/instructors/{instructorUserId}")
+  @PreAuthorize("hasRole('ADMIN')")
   public Result<TeamResponse> removeInstructor(@PathVariable Long id, @PathVariable Long instructorUserId) {
     return Result.ok("Remove Instructor Success", teamService.removeInstructor(id, instructorUserId));
   }

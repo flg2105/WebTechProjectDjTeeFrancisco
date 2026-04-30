@@ -148,6 +148,46 @@ class UserPhaseThreeIntegrationTest {
   }
 
   @Test
+  void should_CreateStudent_When_AdminOrInstructorSetsUpAccount() throws Exception {
+    mvc.perform(post("/api/students")
+            .with(instructor())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "email": "phase3.staff.created.student@example.edu",
+                  "displayName": "Staff Created Student",
+                  "password": "projectpulse123"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.email").value("phase3.staff.created.student@example.edu"))
+        .andExpect(jsonPath("$.data.role").value("STUDENT"))
+        .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+  }
+
+  @Test
+  void should_CreateInstructor_When_AdminUsesInstructorManagementEndpoint() throws Exception {
+    mvc.perform(post("/api/instructors")
+            .with(admin())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "email": "phase3.admin.created.instructor@example.edu",
+                  "displayName": "Admin Created Instructor",
+                  "password": "projectpulse123"
+                }
+                """))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS))
+        .andExpect(jsonPath("$.data.email").value("phase3.admin.created.instructor@example.edu"))
+        .andExpect(jsonPath("$.data.role").value("INSTRUCTOR"))
+        .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+  }
+
+  @Test
   void should_ViewStudent_WithSectionTeamWarsAndPeerEvaluations() throws Exception {
     Long studentId = setupStudent("phase3.viewme@example.edu", "View Me");
     Long evaluatorId = setupStudent("phase3.evaluator@example.edu", "Peer Reviewer");
