@@ -86,6 +86,18 @@
         <div v-if="isLoadingDetails" class="empty-state">Loading student details...</div>
         <div v-else-if="!selectedStudent" class="empty-state">Choose a student to inspect.</div>
         <div v-else class="stack-gap-md">
+          <div v-if="isAdmin" class="delete-student-panel">
+            <div>
+              <h3>Delete Student Account</h3>
+              <p class="helper mb-0">
+                Permanently removes this student and their WAR and peer-evaluation records.
+              </p>
+            </div>
+            <button class="danger-button" type="button" :disabled="isDeletingStudent" @click="deleteSelectedStudent">
+              {{ isDeletingStudent ? 'Deleting...' : 'Delete Student' }}
+            </button>
+          </div>
+
           <div class="detail-grid">
             <div>
               <p class="detail-label">First name</p>
@@ -189,7 +201,8 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { authSession } from '../../shared/services/authSession'
 import { usersService } from '../users/usersService'
 
 const students = ref([])
@@ -199,9 +212,11 @@ const searchQuery = ref('')
 const isLoadingList = ref(false)
 const isLoadingDetails = ref(false)
 const isCreatingStudent = ref(false)
+const isDeletingStudent = ref(false)
 const error = ref('')
 const message = ref('')
 const studentForm = reactive({ displayName: '', email: '', password: '' })
+const isAdmin = computed(() => authSession.currentUser?.role === 'ADMIN')
 
 onMounted(loadAll)
 
@@ -265,6 +280,34 @@ async function setupStudent() {
     error.value = err.message
   } finally {
     isCreatingStudent.value = false
+  }
+}
+
+async function deleteSelectedStudent() {
+  if (!selectedStudent.value) {
+    return
+  }
+  const studentName = selectedStudent.value.displayName || selectedStudent.value.email
+  const confirmed = window.confirm(
+    `Delete ${studentName}? This permanently removes the student account, team assignments, invitations, WARs, and peer evaluations.`
+  )
+  if (!confirmed) {
+    return
+  }
+
+  isDeletingStudent.value = true
+  error.value = ''
+  message.value = ''
+  try {
+    await usersService.deleteStudent(selectedStudent.value.id)
+    message.value = 'Student account deleted.'
+    selectedStudentId.value = null
+    selectedStudent.value = null
+    await loadStudents()
+  } catch (err) {
+    error.value = err.message
+  } finally {
+    isDeletingStudent.value = false
   }
 }
 
@@ -361,6 +404,17 @@ function formatDateTime(value) {
   align-self: start;
 }
 
+.delete-student-panel {
+  align-items: center;
+  background: var(--danger-soft);
+  border: 1px solid rgba(203, 95, 86, 0.34);
+  border-radius: 18px;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
 .table-wrap {
   overflow-x: auto;
 }
@@ -379,6 +433,7 @@ function formatDateTime(value) {
 @media (max-width: 760px) {
   .page-heading,
   .panel-heading,
+  .delete-student-panel,
   .search-row {
     align-items: stretch;
     flex-direction: column;

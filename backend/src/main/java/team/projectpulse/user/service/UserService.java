@@ -2,6 +2,7 @@ package team.projectpulse.user.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +12,6 @@ import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.dao.DataIntegrityViolationException;
 import team.projectpulse.peereval.domain.PeerEvaluationEntry;
 import team.projectpulse.peereval.domain.PeerEvaluationSubmission;
 import team.projectpulse.peereval.repository.PeerEvaluationSubmissionRepository;
@@ -236,17 +236,28 @@ public class UserService {
         .filter(found -> found.getRole() == UserRole.STUDENT)
         .orElseThrow(() -> new ApiException(StatusCode.NOT_FOUND, "Student not found with id " + id));
 
+    deletePeerEvaluationsForStudent(id);
+    warEntryRepository.deleteByStudentUserId(id);
     teamMembershipRepository.deleteByStudentUserId(id);
     invitationRepository.deleteByEmailIgnoreCaseAndRole(student.getEmail(), UserRole.STUDENT);
-    try {
-      userRepository.delete(student);
-      userRepository.flush();
-      return true;
-    } catch (DataIntegrityViolationException ex) {
-      student.setStatus(UserStatus.INACTIVE);
-      student.touch();
-      userRepository.save(student);
-      return false;
+    userRepository.delete(student);
+    return true;
+  }
+
+  private void deletePeerEvaluationsForStudent(Long studentUserId) {
+    peerEvaluationSubmissionRepository.deleteAll(peerEvaluationSubmissionRepository
+        .findByEvaluatorStudentUserIdOrderByWeekStartDateDesc(studentUserId));
+
+    List<PeerEvaluationSubmission> submissions = peerEvaluationSubmissionRepository
+        .findDistinctByEntriesEvaluateeStudentUserIdOrderByWeekStartDateDesc(studentUserId);
+    for (PeerEvaluationSubmission submission : submissions) {
+      List<PeerEvaluationEntry> entriesToRemove = new ArrayList<>(submission.getEntries().stream()
+          .filter(entry -> Objects.equals(entry.getEvaluateeStudentUserId(), studentUserId))
+          .toList());
+      entriesToRemove.forEach(submission::removeEntry);
+      if (submission.getEntries().isEmpty()) {
+        peerEvaluationSubmissionRepository.delete(submission);
+      }
     }
   }
 

@@ -91,4 +91,9 @@ public class PeerEvaluationSubmission {
     entry.setSubmission(this);
     entries.add(entry);
   }
+
+  public void removeEntry(PeerEvaluationEntry entry) {
+    entries.remove(entry);
+    entry.setSubmission(null);
+  }
 }

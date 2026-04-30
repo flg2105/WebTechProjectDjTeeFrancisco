@@ -351,6 +351,16 @@ class UserPhaseThreeIntegrationTest {
   void should_DeleteStudent_AndCleanupMembershipsAndInvites() throws Exception {
     String email = "phase3.deleteme@example.edu";
     Long studentId = setupStudent(email, "Delete Me");
+    Long evaluatorId = setupStudent("phase3.delete.evaluator@example.edu", "Delete Evaluator");
+    StudentTeamContext context = createStudentTeamContext(
+        studentId,
+        evaluatorId,
+        "Capstone Delete 2026",
+        "Delete Crew",
+        "2026-2027");
+    createWarForStudent(studentId, context.activeWeekId(), context.teamId());
+    createPeerEvaluationForStudent(studentId, evaluatorId, context.sectionId(), context.teamId(), context.weekStartDate());
+    createPeerEvaluationForStudent(evaluatorId, studentId, context.sectionId(), context.teamId(), context.weekStartDate());
 
     TeamMembership membership = new TeamMembership();
     membership.setTeamId(123L);
@@ -376,6 +386,13 @@ class UserPhaseThreeIntegrationTest {
 
     assertFalse(teamMembershipRepository.existsByStudentUserId(studentId));
     assertFalse(invitationRepository.existsByEmailIgnoreCaseAndRole(email, UserRole.STUDENT));
+    assertEquals(0, warEntryRepository.findByStudentUserIdOrderByActiveWeekIdDesc(studentId).size());
+    assertEquals(0, peerEvaluationSubmissionRepository
+        .findDistinctByEntriesEvaluateeStudentUserIdOrderByWeekStartDateDesc(studentId)
+        .size());
+    assertEquals(0, peerEvaluationSubmissionRepository
+        .findByEvaluatorStudentUserIdOrderByWeekStartDateDesc(studentId)
+        .size());
   }
 
   private Long setupStudent(String email, String displayName) throws Exception {

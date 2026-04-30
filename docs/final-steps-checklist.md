@@ -51,6 +51,9 @@ Notes:
 - [x] UC-16: View a student — ensure `StudentDetailsResponse` is populated with the required details (`requirements/3_Use_Cases.md`)
 - [x] UC-21: Find instructors — ensure results include any required associations (team assignment fields are currently blank) (`requirements/3_Use_Cases.md`)
 
+### Student account deletion (complete)
+- [x] UC-17: Admin deletes a student account and removes associated WAR and peer-evaluation records (`requirements/3_Use_Cases.md`)
+
 ---
 
 ## Frontend (Vue 3) — Missing / Incomplete Screens
