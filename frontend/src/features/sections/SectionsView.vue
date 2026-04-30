@@ -68,6 +68,14 @@
             <button class="text-button" type="button" @click="openSectionDetails(section.id)">Details</button>
             <button class="text-button" type="button" @click="selectSection(section)">Edit</button>
             <button class="text-button" type="button" @click="prepareActiveWeeks(section)">Weeks</button>
+            <button
+              v-if="canDeleteSections && selectedSectionId === section.id"
+              class="danger-button"
+              type="button"
+              @click="deleteSection(section)"
+            >
+              Delete
+            </button>
           </div>
         </article>
       </div>
@@ -331,6 +339,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
+import { authSession } from '../../shared/services/authSession'
 import { rubricsService } from '../rubrics/rubricsService'
 import { usersService } from '../users/usersService'
 import { sectionsService } from './sectionsService'
@@ -359,6 +368,7 @@ const sectionForm = reactive({
 const studentInvite = reactive({ sectionId: '', emails: '' })
 const instructorInvite = reactive({ emails: '' })
 const instructorAssignment = reactive({ sectionId: '', instructorUserId: '' })
+const canDeleteSections = computed(() => ['ADMIN', 'INSTRUCTOR'].includes(authSession.currentUser?.role || ''))
 
 const selectedSectionForInstructorAssignment = computed(() => {
   if (!instructorAssignment.sectionId) {
@@ -398,6 +408,11 @@ function resetSectionForm() {
 }
 
 function selectSection(section) {
+  if (selectedSectionId.value === section.id) {
+    resetSectionForm()
+    return
+  }
+
   selectedSectionId.value = section.id
   sectionForm.name = section.name
   sectionForm.academicYear = section.academicYear
@@ -507,6 +522,43 @@ async function saveSection() {
     error.value = err.message
   } finally {
     savingSection.value = false
+  }
+}
+
+async function deleteSection(section) {
+  const confirmed = window.confirm(
+    `Delete section "${section.name}"? This will remove its related teams, active weeks, invitations, WAR data, and peer evaluations.`
+  )
+  if (!confirmed) {
+    return
+  }
+
+  message.value = ''
+  error.value = ''
+  try {
+    await sectionsService.remove(section.id)
+    if (selectedSectionId.value === section.id) {
+      resetSectionForm()
+    }
+    if (selectedSectionDetailsId.value === section.id) {
+      selectedSectionDetailsId.value = null
+      selectedSectionDetails.value = null
+    }
+    if (activeWeeksSection.value?.id === section.id) {
+      activeWeeksSection.value = null
+      weekForm.value = []
+    }
+    if (Number(instructorAssignment.sectionId) === section.id) {
+      instructorAssignment.sectionId = ''
+      instructorAssignment.instructorUserId = ''
+    }
+    if (String(studentInvite.sectionId) === String(section.id)) {
+      studentInvite.sectionId = ''
+    }
+    message.value = 'Section deleted.'
+    await loadSections()
+  } catch (err) {
+    error.value = err.message
   }
 }
 
@@ -693,9 +745,14 @@ onMounted(loadAll)
 
 .list-item {
   display: flex;
+  flex-direction: column;
   gap: 1rem;
-  justify-content: space-between;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.list-item .button-row {
+  flex-wrap: wrap;
+  justify-content: flex-start;
 }
 
 .list-item:hover {

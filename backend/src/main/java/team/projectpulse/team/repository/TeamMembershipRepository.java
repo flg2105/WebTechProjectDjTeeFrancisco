@@ -15,6 +15,8 @@ public interface TeamMembershipRepository extends JpaRepository<TeamMembership, 
 
   List<TeamMembership> findByTeamIdOrderByStudentUserIdAsc(Long teamId);
 
+  void deleteByTeamId(Long teamId);
+
   void deleteByTeamIdAndStudentUserId(Long teamId, Long studentUserId);
 
   void deleteByStudentUserId(Long studentUserId);

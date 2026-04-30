@@ -53,6 +53,13 @@ public class SectionController {
     return Result.ok("Update Section Success", sectionService.update(id, request));
   }
 
+  @DeleteMapping("/{id}")
+  @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+  public Result<Void> delete(@PathVariable Long id) {
+    sectionService.delete(id);
+    return Result.ok("Delete Section Success", null);
+  }
+
   @PutMapping("/{id}/active-weeks")
   @PreAuthorize("hasRole('ADMIN')")
   public Result<SectionResponse> replaceActiveWeeks(

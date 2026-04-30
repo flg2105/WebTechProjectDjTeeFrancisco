@@ -9,4 +9,6 @@ public interface WarEntryRepository extends JpaRepository<WarEntry, Long> {
   Optional<WarEntry> findByActiveWeekIdAndStudentUserId(Long activeWeekId, Long studentUserId);
 
   List<WarEntry> findByStudentUserIdOrderByActiveWeekIdDesc(Long studentUserId);
+
+  void deleteByActiveWeekIdIn(List<Long> activeWeekIds);
 }

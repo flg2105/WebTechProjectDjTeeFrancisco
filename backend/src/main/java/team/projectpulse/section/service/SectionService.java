@@ -29,6 +29,7 @@ import team.projectpulse.section.dto.SectionUserSummaryResponse;
 import team.projectpulse.section.repository.ActiveWeekRepository;
 import team.projectpulse.section.repository.SectionInstructorAssignmentRepository;
 import team.projectpulse.section.repository.SectionRepository;
+import team.projectpulse.peereval.repository.PeerEvaluationSubmissionRepository;
 import team.projectpulse.system.ApiException;
 import team.projectpulse.team.domain.Team;
 import team.projectpulse.team.domain.TeamInstructorAssignment;
@@ -43,6 +44,7 @@ import team.projectpulse.user.domain.UserRole;
 import team.projectpulse.user.domain.UserStatus;
 import team.projectpulse.user.repository.InvitationRepository;
 import team.projectpulse.user.repository.UserRepository;
+import team.projectpulse.war.repository.WarEntryRepository;
 
 @Service
 @Transactional(readOnly = true)
@@ -56,6 +58,8 @@ public class SectionService {
   private final TeamMembershipRepository teamMembershipRepository;
   private final TeamInstructorAssignmentRepository teamInstructorAssignmentRepository;
   private final InvitationRepository invitationRepository;
+  private final WarEntryRepository warEntryRepository;
+  private final PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository;
 
   public SectionService(
       SectionRepository sectionRepository,
@@ -66,7 +70,9 @@ public class SectionService {
       TeamRepository teamRepository,
       TeamMembershipRepository teamMembershipRepository,
       TeamInstructorAssignmentRepository teamInstructorAssignmentRepository,
-      InvitationRepository invitationRepository) {
+      InvitationRepository invitationRepository,
+      WarEntryRepository warEntryRepository,
+      PeerEvaluationSubmissionRepository peerEvaluationSubmissionRepository) {
     this.sectionRepository = sectionRepository;
     this.activeWeekRepository = activeWeekRepository;
     this.rubricRepository = rubricRepository;
@@ -76,6 +82,8 @@ public class SectionService {
     this.teamMembershipRepository = teamMembershipRepository;
     this.teamInstructorAssignmentRepository = teamInstructorAssignmentRepository;
     this.invitationRepository = invitationRepository;
+    this.warEntryRepository = warEntryRepository;
+    this.peerEvaluationSubmissionRepository = peerEvaluationSubmissionRepository;
   }
 
   public List<SectionResponse> findAll(String name) {
@@ -164,6 +172,36 @@ public class SectionService {
     sectionInstructorAssignmentRepository.deleteBySectionIdAndInstructorUserId(sectionId, instructorUserId);
     section.touch();
     return toSummaryResponse(sectionRepository.save(section));
+  }
+
+  @Transactional
+  public void delete(Long id) {
+    Section section = getSection(id);
+    List<Long> activeWeekIds = activeWeekRepository.findBySectionIdOrderByWeekStartDateAsc(id).stream()
+        .map(ActiveWeek::getId)
+        .toList();
+    List<Long> teamIds = teamRepository.findBySectionIdOrderByNameAsc(id).stream()
+        .map(Team::getId)
+        .toList();
+
+    peerEvaluationSubmissionRepository.deleteBySectionId(id);
+    if (!activeWeekIds.isEmpty()) {
+      warEntryRepository.deleteByActiveWeekIdIn(activeWeekIds);
+    }
+
+    for (Long teamId : teamIds) {
+      teamInstructorAssignmentRepository.deleteByTeamId(teamId);
+      teamMembershipRepository.deleteByTeamId(teamId);
+    }
+
+    if (!teamIds.isEmpty()) {
+      teamRepository.deleteAllById(teamIds);
+    }
+
+    sectionInstructorAssignmentRepository.deleteBySectionId(id);
+    invitationRepository.deleteBySectionId(id);
+    activeWeekRepository.deleteBySectionId(id);
+    sectionRepository.delete(section);
   }
 
   private Section getSection(Long id) {

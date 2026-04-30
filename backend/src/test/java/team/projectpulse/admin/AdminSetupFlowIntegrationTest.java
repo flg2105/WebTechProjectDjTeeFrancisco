@@ -2,6 +2,7 @@ package team.projectpulse.admin;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -172,6 +173,33 @@ class AdminSetupFlowIntegrationTest {
         .andExpect(jsonPath("$.data.unassignedInstructors[0].id").value(sectionOnlyInstructorId))
         .andExpect(jsonPath("$.data.rubricUsed.id").value(rubricId))
         .andExpect(jsonPath("$.data.rubricUsed.criteria.length()").value(1));
+  }
+
+  @Test
+  void should_DeleteSection_AndCascadeRelatedRecords() throws Exception {
+    Long rubricId = createRubricWithName("Delete Section Rubric");
+    Long sectionId = createSectionWithName(rubricId, "Delete Section");
+    createActiveWeeks(sectionId);
+
+    Long studentId = setupStudentWithEmail("delete.section.student@example.edu", "Delete Section Student");
+    Long instructorId = setupInstructorWithEmail("delete.section.instructor@example.edu", "Delete Section Instructor");
+
+    inviteStudentToSection(sectionId, "delete.section.student@example.edu");
+    assignInstructorToSection(sectionId, instructorId);
+
+    Long teamId = createTeamWithName(sectionId, "Delete Section Team");
+    assignStudentToTeam(teamId, studentId);
+    assignInstructorToTeam(teamId, instructorId);
+
+    mvc.perform(delete("/api/sections/" + sectionId).with(admin()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.flag").value(true))
+        .andExpect(jsonPath("$.code").value(SUCCESS));
+
+    mvc.perform(get("/api/sections/" + sectionId).with(admin()))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(NOT_FOUND));
   }
 
   private Long createRubric() throws Exception {
