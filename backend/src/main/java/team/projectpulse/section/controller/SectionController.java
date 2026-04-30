@@ -30,7 +30,7 @@ public class SectionController {
   }
 
   @GetMapping
-  @PreAuthorize("hasAnyRole('ADMIN', 'STUDENT')")
+  @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR', 'STUDENT')")
   public Result<List<SectionResponse>> findAll(@RequestParam(required = false) String name) {
     return Result.ok("Find Sections Success", sectionService.findAll(name));
   }

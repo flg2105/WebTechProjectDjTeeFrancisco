@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static team.projectpulse.system.StatusCode.FORBIDDEN;
 import static team.projectpulse.system.StatusCode.INVALID_ARGUMENT;
 import static team.projectpulse.system.StatusCode.SUCCESS;
 
@@ -76,6 +77,29 @@ class TeamInstructorAssignmentIntegrationTest {
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.flag").value(false))
         .andExpect(jsonPath("$.code").value(INVALID_ARGUMENT));
+  }
+
+  @Test
+  void should_RejectInstructorTeamAssignment_When_RequesterIsInstructor() throws Exception {
+    String suffix = uniqueSuffix();
+    Long rubricId = createRubric("UC-19 Rubric Authz " + suffix);
+    Long sectionId = createSection(rubricId, "UC-19 Section Authz " + suffix);
+    Long teamId = createTeam(sectionId, "UC-19 Team Authz " + suffix);
+    Long instructorId = setupInstructor(uniqueEmail("uc19.authz.instructor"), "UC-19 Authz Instructor " + suffix);
+
+    assignInstructorToSection(sectionId, instructorId);
+
+    mvc.perform(post("/api/teams/" + teamId + "/instructors")
+            .with(instructor())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""
+                {
+                  "instructorUserIds": [%d]
+                }
+                """.formatted(instructorId)))
+        .andExpect(status().isForbidden())
+        .andExpect(jsonPath("$.flag").value(false))
+        .andExpect(jsonPath("$.code").value(FORBIDDEN));
   }
 
   private void assignInstructorToSection(Long sectionId, Long instructorUserId) throws Exception {
@@ -193,5 +217,9 @@ class TeamInstructorAssignmentIntegrationTest {
 
   private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor admin() {
     return SecurityMockMvcRequestPostProcessors.user("admin@test.local").roles("ADMIN");
+  }
+
+  private SecurityMockMvcRequestPostProcessors.UserRequestPostProcessor instructor() {
+    return SecurityMockMvcRequestPostProcessors.user("instructor@test.local").roles("INSTRUCTOR");
   }
 }

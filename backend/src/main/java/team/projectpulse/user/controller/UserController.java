@@ -70,6 +70,12 @@ public class UserController {
     return Result.ok("Setup Instructor Success", userService.setupInstructor(request));
   }
 
+  @PostMapping("/api/students")
+  @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
+  public Result<UserResponse> createStudent(@Valid @RequestBody SetupAccountRequest request) {
+    return Result.ok("Create Student Success", userService.createStudent(request));
+  }
+
   @GetMapping("/api/students")
   @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
   public Result<List<StudentSearchResultResponse>> findStudents(
@@ -91,6 +97,12 @@ public class UserController {
       @RequestParam(required = false) String teamName,
       @RequestParam(required = false) UserStatus status) {
     return Result.ok("Find Instructors Success", userService.findInstructors(firstName, lastName, teamName, status));
+  }
+
+  @PostMapping("/api/instructors")
+  @PreAuthorize("hasRole('ADMIN')")
+  public Result<UserResponse> createInstructor(@Valid @RequestBody SetupAccountRequest request) {
+    return Result.ok("Create Instructor Success", userService.createInstructor(request));
   }
 
   @GetMapping("/api/instructors/{id}")
