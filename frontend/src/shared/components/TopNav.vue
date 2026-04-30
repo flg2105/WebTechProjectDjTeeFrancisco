@@ -42,7 +42,7 @@ import { authSession } from '../services/authSession'
 const router = useRouter()
 
 const navItems = [
-  { to: '/', label: 'Home', caption: 'Project overview', icon: 'H', roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT'] },
+  { to: '/', label: 'Home', caption: 'Your dashboard', icon: 'H', roles: ['ADMIN', 'INSTRUCTOR', 'STUDENT'], home: true },
   { to: '/sections', label: 'Sections', caption: 'Schedules and invites', icon: 'S', roles: ['ADMIN'] },
   { to: '/instructors', label: 'Instructors', caption: 'Accounts and status', icon: 'I', roles: ['ADMIN'] },
   { to: '/students', label: 'Students', caption: 'Profiles and history', icon: 'U', roles: ['ADMIN', 'INSTRUCTOR'] },
@@ -55,7 +55,20 @@ const navItems = [
 
 const visibleNavItems = computed(() => {
   const role = authSession.currentUser?.role
-  return navItems.filter((item) => !role || item.roles.includes(role))
+  const homePathByRole = {
+    ADMIN: '/home/admin',
+    INSTRUCTOR: '/home/instructor',
+    STUDENT: '/home/student'
+  }
+
+  return navItems
+    .filter((item) => !role || item.roles.includes(role))
+    .map((item) => {
+      if (!item.home) {
+        return item
+      }
+      return { ...item, to: homePathByRole[role] || '/' }
+    })
 })
 
 async function signOut() {
